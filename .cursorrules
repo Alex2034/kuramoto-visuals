@@ -1,0 +1,8 @@
+# Context & Environment Rules
+1. You are running as user `alex2034`. You strictly DO NOT have sudo privileges. Never attempt to use `sudo` or modify system-level configurations outside the `~/kuramoto_vis` directory.
+2. You must ONLY use the conda environment named `kuramoto_vis`.
+3. Before executing ANY terminal commands, running Python scripts, or installing packages via pip/conda, you must ensure the environment is activated. 
+4. If the terminal is not in the `kuramoto_vis` environment, your first command must be `conda activate kuramoto_vis`.
+5. Alternatively, use `conda run -n kuramoto_vis <command>` to guarantee execution within the isolated environment.
+6. Never modify or install packages to the `base` conda environment or the global system Python.
+7. Always use `python` or `pip` within the active conda environment, verifying via `which python` if unsure.
