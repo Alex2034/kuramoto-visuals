@@ -72,7 +72,7 @@ function velocityCurves(data: ReducedResponse): { means: Series[]; nodes: Backgr
     const columns = g.nodes.map(column);
     columns.forEach((values, j) => nodes.push({ color: g.nodeColor(j), values }));
     means.push({
-      name: `mean, ${g.name}`,
+      name: g.name,
       color: g.color,
       values: data.times.map((_, f) => columns.reduce((acc, c) => acc + c[f], 0) / columns.length),
     });
@@ -107,7 +107,7 @@ export default function ReducedView({ data, frame }: ReducedViewProps) {
           ? []
           : [
               {
-                name: `ρ − λt, cluster ${idx + 1}`,
+                name: `cluster ${idx + 1}`,
                 color: CLUSTER_COLORS[idx],
                 values: d.rho.map((rho, j) => rho - data.lambda_val * data.times[j]),
               },
@@ -118,8 +118,8 @@ export default function ReducedView({ data, frame }: ReducedViewProps) {
   const deficitSeries = useMemo(
     () =>
       [
-        ...data.disks.map((d, idx) => ({ name: `1 − |r|, cluster ${idx + 1}`, color: CLUSTER_COLORS[idx], values: d.r_deficit })),
-        ...(data.chain_deficit.length > 0 ? [{ name: "1 − |r|, chain", color: CHAIN_COLOR, values: data.chain_deficit }] : []),
+        ...data.disks.map((d, idx) => ({ name: `cluster ${idx + 1}`, color: CLUSTER_COLORS[idx], values: d.r_deficit })),
+        ...(data.chain_deficit.length > 0 ? [{ name: "chain", color: CHAIN_COLOR, values: data.chain_deficit }] : []),
         // a group of one node has |r| = 1 identically: nothing to plot on a log axis
       ].filter((s) => s.values.some((v) => v > 0)),
     [data],

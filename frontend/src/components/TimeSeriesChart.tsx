@@ -53,6 +53,15 @@ function fmt(v: number): string {
   return a >= 1e4 || a < 1e-2 ? v.toExponential(1) : v.toPrecision(3);
 }
 
+/** Short form for the readout above the plot: two significant digits, at most 7 characters. */
+function fmtShort(v: number): string {
+  if (!Number.isFinite(v)) return "–";
+  if (v === 0) return "0";
+  const a = Math.abs(v);
+  if (a >= 1e4 || a < 1e-2) return v.toExponential(1);
+  return a >= 100 ? v.toFixed(0) : v.toPrecision(2);
+}
+
 export default function TimeSeriesChart({
   title,
   times,
@@ -125,13 +134,18 @@ export default function TimeSeriesChart({
 
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-3 shadow-sm">
-      <div className="text-sm font-medium">{title}</div>
-      <div className="mb-1 flex flex-wrap gap-x-3 text-xs text-gray-600">
-        <span>t = {fmt(times[shown])}</span>
+      {/* every value sits in a box of fixed width, so the entries do not move as the numbers change */}
+      <div className="flex items-baseline justify-between gap-2">
+        <div className="text-sm font-medium">{title}</div>
+        <div className="whitespace-nowrap text-xs tabular-nums text-gray-600">
+          t = <span className="inline-block w-[7ch]">{fmtShort(times[shown])}</span>
+        </div>
+      </div>
+      <div className="mb-1 flex flex-wrap gap-x-2 whitespace-nowrap text-xs tabular-nums text-gray-600">
         {series.map((s) => (
           <span key={s.name}>
             <span className="mr-1 inline-block h-2 w-2 rounded-full" style={{ background: s.color }} />
-            {s.name}: {fmt(s.values[shown])}
+            {s.name}: <span className="inline-block w-[7ch]">{fmtShort(s.values[shown])}</span>
           </span>
         ))}
       </div>
