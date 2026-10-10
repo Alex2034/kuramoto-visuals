@@ -1,41 +1,48 @@
 # Kuramoto Vis
 
-Visualization of the Kuramoto model on a dumbbell graph: two complete graphs connected by a chain.
+An interactive visualization of the Kuramoto model on a dumbbell graph: two complete graphs of size `N` joined by a chain of length `l`.
+
+The nodes of each complete graph that are not attached to the chain are identical, so their motion is a single Möbius transformation of the unit disk (the Watanabe–Strogatz reduction). The app integrates this reduced system and shows each cluster as a point moving in the hyperbolic disk, next to the phases of all nodes.
+
+## What the app shows
+
+- **Simulation** tab
+  - the Poincaré disk with all nodes on its boundary, the barycenters of the clusters, of the chain and of all nodes, and optionally the potential map and the chain edges;
+  - two views: physical, and centered on a cluster or on all nodes;
+  - time series: hyperbolic radius of the clusters minus `λt`, distance from synchrony `1 − |r|`, angular velocities;
+  - a "microscope" for each cluster, which resolves phase differences far below machine precision;
+  - a drawing of the graph for the chosen parameters.
+- **The model** tab: the equations, the reduction and how to read the simulation.
+
+Parameters: model (dumbbell or one complete graph), `N`, `l`, coupling `λ` inside the complete graphs, coupling `κ` in the chain, run length, seed of the initial phases.
 
 ## Mathematics
 
-`source/main.pdf` (built from `source/main.tex`) is the reference for all formulas: the system, its complex form, the Watanabe–Strogatz reduction, the gauge, the integrated variables and the numerically stable forms, with a table mapping each formula to its implementation and test. `source/v0.pdf` is the bachelor thesis it grew out of.
+`source/main.pdf` (built from `source/main.tex`) is the reference for all formulas: the system, its complex form, the reduction, the gauge, the integrated variables and the numerically stable forms, with a table mapping each formula to its implementation and test. `source/v0.pdf` is the bachelor thesis it grew out of.
 
 ```bash
 cd source
 latexmk -pdf main.tex
 ```
 
-The site shows the same formulas: `python3 scripts/extract_formulas.py` exports the labelled equations of `main.tex` to `frontend/src/lib/formulas.json`, which the frontend renders with KaTeX (tab "The model" and the captions next to the simulation).
+The site shows the same formulas. After editing `main.tex`, export the labelled equations and check that every formula the site uses exists:
 
-## Architecture
+```bash
+python3 scripts/extract_formulas.py
+cd frontend && npm run check:formulas
+```
 
-- **Backend** (FastAPI): Python computation (numpy, scipy) exposed via REST API
-- **Frontend** (Next.js + React + TypeScript): Parameter controls and animated visualization
+## Running locally
 
-## Quick Start
-
-### Backend
-
-Python dependencies are managed with [uv](https://docs.astral.sh/uv/) (`backend/pyproject.toml` + `backend/uv.lock`).
+Backend (FastAPI, numpy, scipy), managed with [uv](https://docs.astral.sh/uv/):
 
 ```bash
 cd backend
 uv sync
-uv run uvicorn main:app --reload --host 0.0.0.0 --port 8000
+uv run uvicorn main:app --reload --port 8000
 ```
 
-API: `http://localhost:8000`
-- `POST /simulate` — run simulation (body: `{ N, l, lambda_val, kappa, t_max }`)
-- `POST /simulate/reduced` — Watanabe–Strogatz reduction of the complete-graph components next to the full system (body: `{ mode, N, l, lambda_val, kappa, t_max?, n_frames, seed }`, `mode` is `dumbbell` or `complete`)
-- `GET /health` — health check
-
-### Frontend
+Frontend (Next.js 14, React, TypeScript, Tailwind, KaTeX):
 
 ```bash
 cd frontend
@@ -43,49 +50,46 @@ npm install
 npm run dev
 ```
 
-App: `http://localhost:3000`
+Open `http://localhost:3000`. If the backend is not on `http://localhost:8000`, set `NEXT_PUBLIC_API_URL` in `frontend/.env.local`. The backend accepts requests only from `http://localhost:3000` (CORS in `backend/main.py`).
 
-Set `NEXT_PUBLIC_API_URL=http://localhost:8000` in `.env.local` if the backend runs on a different host.
+## API
 
-## Project Structure
+- `POST /simulate/reduced` — integrates the reduced system and the full system on the same time grid. Body: `{ mode, N, l, lambda_val, kappa, t_max?, n_frames, seed }`, where `mode` is `dumbbell` or `complete`. Without `t_max` the run lasts `3/λ₂` (dumbbell) or `30/λ` (complete graph), where `λ₂` is the smallest nonzero eigenvalue of the graph Laplacian.
+- `GET /health` — health check.
+
+The response shape is described in `frontend/src/types/api.ts`.
+
+## Project structure
 
 ```
-kuramoto_vis/
-├── backend/
-│   ├── main.py           # FastAPI app + /simulate endpoint
-│   ├── kuramoto.py       # Pure simulation logic (full system)
-│   ├── mobius.py         # Disk automorphisms, conformal barycenter, potential
-│   ├── reduced.py        # Reduction onto the hyperbolic disk (WS ansatz)
-│   ├── tests/            # pytest: reduction vs full system
-│   ├── scripts/          # timescales.py: 1/lambda_2 vs fitted decay time
-│   ├── pyproject.toml    # uv project (deps + lockfile in uv.lock)
-│   └── test_api.py       # API verification script
-├── frontend/             # Next.js App Router
-│   └── src/
-│       ├── app/
-│       ├── components/
-│       └── types/
-├── source/               # main.tex / main.pdf: mathematical notes; v0: thesis
-└── streamlit_example.py  # Original monolithic reference
+backend/
+  main.py        FastAPI app
+  kuramoto.py    full system: graph, right-hand side, integration, energy
+  mobius.py      disk automorphisms, conformal barycenter, potential, stable forms
+  reduced.py     reduced system, reconstruction, diagnostics, response
+  tests/         pytest: reduction against the full system, formulas of the notes
+  scripts/       timescales.py: 1/λ₂ against the fitted decay time
+frontend/
+  src/app/         page with the two tabs
+  src/components/  disk, charts, microscope, graph drawing, parameter panel, model text
+  src/lib/         mobius.ts (mirror of mobius.py), formulas.json (generated)
+  src/types/       API types
+scripts/
+  extract_formulas.py   main.tex → frontend/src/lib/formulas.json
+source/
+  main.tex, main.pdf    mathematical notes
+  v0.tex, v0.pdf        bachelor thesis
 ```
 
-## Verification
+## Checks
 
 ```bash
 cd backend
 uv run pytest
-uv run python scripts/timescales.py
 ```
 
-With the backend running:
-
 ```bash
-cd backend
-uv run python test_api.py
-```
-
-The original Streamlit reference needs an extra dependency group:
-
-```bash
-uv run --project backend --group streamlit streamlit run streamlit_example.py
+cd frontend
+npm run lint
+npm run check:formulas
 ```
