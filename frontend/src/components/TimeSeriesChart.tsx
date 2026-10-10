@@ -37,10 +37,11 @@ interface TimeSeriesChartProps {
   marksNote?: string;
   /** What the chart shows, with every symbol defined; rendered under the plot. */
   children?: React.ReactNode;
+  /** Height of the plot in the units of its 360-wide coordinate system. */
+  height?: number;
 }
 
 const W = 360;
-const H = 170;
 const M = { left: 46, right: 10, top: 8, bottom: 22 };
 const LOG_FLOOR = 1e-300;
 const NO_BACKGROUND: BackgroundLine[] = [];
@@ -63,6 +64,7 @@ export default function TimeSeriesChart({
   marks = NO_MARKS,
   marksNote,
   children,
+  height: H = 170,
 }: TimeSeriesChartProps) {
   const [hover, setHover] = useState<number | null>(null);
   const clipId = useId();
@@ -106,7 +108,7 @@ export default function TimeSeriesChart({
       lines: series.map((s) => path(s.values)),
       backgroundLines: background.map((b) => path(b.values)),
     };
-  }, [times, series, background, logY, yMin]);
+  }, [times, series, background, logY, yMin, H]);
 
   const { lo, hi, t0, t1, plotW, plotH, x, y, yOf } = plot;
   const tickLabel = (u: number) => (logY ? `1e${u.toFixed(0)}` : fmt(u));

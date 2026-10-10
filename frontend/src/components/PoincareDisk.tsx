@@ -34,6 +34,7 @@ export function chainColor(j: number, l: number): string {
 const ALL_COLOR = "#52514e"; // neutral ink for the barycenter of all nodes
 
 const SIZE = 520;
+const MAX_SIZE = 760; // largest on-screen side of the disk, in CSS pixels
 const CENTER = SIZE / 2;
 const SCALE = 230; // pixels per unit (radius 1 -> 230px)
 const GRID = 110; // potential heatmap resolution
@@ -230,16 +231,22 @@ export default function PoincareDisk({ data, frame, view, selected, layers }: Po
   const c = toPx({ x: 0, y: 0 });
 
   return (
-    <div className="shrink-0 rounded-lg border border-gray-200 bg-white p-4 shadow-sm" style={{ width: SIZE + 34 }}>
-      <div className="relative" style={{ width: SIZE, height: SIZE }}>
+    <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+      {/* drawn in a SIZE x SIZE coordinate system and scaled to the width of the card */}
+      <div className="relative mx-auto aspect-square w-full" style={{ maxWidth: MAX_SIZE }}>
         <canvas
           ref={canvasRef}
           width={GRID}
           height={GRID}
           className="absolute rounded-full"
-          style={{ left: CENTER - SCALE, top: CENTER - SCALE, width: 2 * SCALE, height: 2 * SCALE }}
+          style={{
+            left: `${((CENTER - SCALE) / SIZE) * 100}%`,
+            top: `${((CENTER - SCALE) / SIZE) * 100}%`,
+            width: `${((2 * SCALE) / SIZE) * 100}%`,
+            height: `${((2 * SCALE) / SIZE) * 100}%`,
+          }}
         />
-        <svg width={SIZE} height={SIZE} className="absolute left-0 top-0 overflow-visible">
+        <svg viewBox={`0 0 ${SIZE} ${SIZE}`} className="absolute left-0 top-0 h-full w-full overflow-visible">
           <circle cx={c.x} cy={c.y} r={SCALE} fill="none" stroke="#c3c2b7" strokeWidth={1.5} />
           {scene.edges && <path d={scene.edges} fill="none" stroke={CHAIN_COLOR} strokeWidth={1} opacity={0.4} />}
           {scene.trails.map((t) => (
@@ -276,7 +283,7 @@ export default function PoincareDisk({ data, frame, view, selected, layers }: Po
           })}
         </svg>
       </div>
-      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-600">
+      <div className="mt-3 flex flex-col gap-1 text-sm text-gray-600">
         {data.disks.map((_, idx) => (
           <span key={idx}>
             <span className="mr-1 inline-block h-2 w-2 rounded-full" style={{ background: CLUSTER_COLORS[idx] }} />

@@ -30,7 +30,7 @@ export default function ClusterMicroscope({ disk, frame, color, index }: Cluster
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
       <div className="mb-1 text-sm font-medium">Microscope: the inside of cluster {index + 1}</div>
-      <svg width={W} height={H}>
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full">
         <line x1={PAD} x2={W - PAD} y1={44} y2={44} stroke="#c3c2b7" strokeWidth={1} />
         {TICKS.map((t) => (
           <g key={t}>

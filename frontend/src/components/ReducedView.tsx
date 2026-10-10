@@ -80,17 +80,8 @@ function velocityCurves(data: ReducedResponse): { means: Series[]; nodes: Backgr
   return { means, nodes };
 }
 
-/** One line of the formula legend next to the disk: what it is, then the formula. */
-function FormulaRow({ label, children }: { label: string; children: string }) {
-  return (
-    <div>
-      <div>{label}</div>
-      <div className="py-1 text-center text-sm text-black">
-        <Tex>{`\\displaystyle ${children}`}</Tex>
-      </div>
-    </div>
-  );
-}
+// in the units of the chart's 360-wide coordinate system
+const CHART_HEIGHT = 126;
 
 export default function ReducedView({ data, frame }: ReducedViewProps) {
   const [view, setView] = useState<DiskView>("physical");
@@ -179,59 +170,40 @@ export default function ReducedView({ data, frame }: ReducedViewProps) {
       </div>
 
       <div className="flex flex-col gap-4">
-        <div className="flex flex-wrap items-start gap-4">
+        {/* the disk and, beside it, the three charts stacked; the chart height is chosen so both columns end together */}
+        <div className="grid grid-cols-1 items-stretch gap-4 xl:grid-cols-[minmax(0,6fr)_minmax(0,5fr)]">
           <PoincareDisk data={data} frame={i} view={view} selected={center} layers={layers} />
-          <div className="w-80 space-y-2 rounded-lg border border-gray-200 bg-white p-4 text-xs text-gray-600 shadow-sm">
-            {view === "physical" ? (
-              <FormulaRow label="node j">{"z_j=\\e^{\\ii\\theta_j}"}</FormulaRow>
-            ) : (
-              <>
-                <FormulaRow label={center === "all" ? "view centered at the barycenter P of all nodes" : `view centered at the barycenter P of cluster ${center + 1}`}>
-                  {"z\\mapsto\\T_P(z)"}
-                </FormulaRow>
-                {center !== "all" && <FormulaRow label="its identical nodes: a rigid pattern">{"\\T_P(z_j)=\\zeta\\,\\beta_j"}</FormulaRow>}
-              </>
-            )}
-            <FormulaRow label="rings, gray dot: barycenter p of a group of nodes">
-              {"\\sum_j\\T_p(z_j)=0,\\qquad \\T_p(z)=\\frac{z-p}{1-\\conj p\\,z}"}
-            </FormulaRow>
-            {layers.potential && (
-              <FormulaRow label="gray map: potential of n nodes">{"F(p)=\\frac1n\\sum_j\\ln\\frac{1-|p|^2}{|p-z_j|^2}"}</FormulaRow>
-            )}
-            {data.tau !== null && (
-              <FormulaRow label="slow time scale of this graph">{`\\tau=1/\\lambda_2=${data.tau.toPrecision(4)}`}</FormulaRow>
-            )}
+          <div className="flex flex-col justify-between gap-4">
+            <TimeSeriesChart title="Hyperbolic radius of the clusters, minus λt" times={data.times} series={rhoSeries} cursor={i} height={CHART_HEIGHT}>
+              <Tex>{"|P|=\\tanh(\\rho/2)"}</Tex>, <Tex>{"P"}</Tex>: barycenter of a cluster
+            </TimeSeriesChart>
+            <TimeSeriesChart
+              title="Distance from synchrony, 1 − |r| (log scale)"
+              times={data.times}
+              series={deficitSeries}
+              cursor={i}
+              logY
+              yMin={deficitFloor}
+              marks={crossings}
+              marksNote="the attached node passes through its cluster"
+              height={CHART_HEIGHT}
+            >
+              <Tex>{"r=\\frac1n\\sum_j\\e^{\\ii\\theta_j}"}</Tex> over the <Tex>{"n"}</Tex> nodes of a group
+            </TimeSeriesChart>
+            <TimeSeriesChart
+              title="Angular velocities"
+              times={data.times}
+              series={velocity.means}
+              background={velocity.nodes}
+              cursor={i}
+              height={CHART_HEIGHT}
+            >
+              <Tex>{"\\dot\\theta_j"}</Tex>: thin, every node; thick, mean over a group
+            </TimeSeriesChart>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-          <TimeSeriesChart title="Hyperbolic radius of the clusters, minus λt" times={data.times} series={rhoSeries} cursor={i}>
-            <Tex>{"|P|=\\tanh(\\rho/2)"}</Tex>, <Tex>{"P"}</Tex>: barycenter of a cluster
-          </TimeSeriesChart>
-          <TimeSeriesChart
-            title="Distance from synchrony, 1 − |r| (log scale)"
-            times={data.times}
-            series={deficitSeries}
-            cursor={i}
-            logY
-            yMin={deficitFloor}
-            marks={crossings}
-            marksNote="the attached node passes through its cluster"
-          >
-            <Tex>{"r=\\frac1n\\sum_j\\e^{\\ii\\theta_j}"}</Tex> over the <Tex>{"n"}</Tex> nodes of a group
-          </TimeSeriesChart>
-          <TimeSeriesChart
-            title="Angular velocities"
-            times={data.times}
-            series={velocity.means}
-            background={velocity.nodes}
-            cursor={i}
-          >
-            <Tex>{"\\dot\\theta_j"}</Tex>: thin, every node; thick, mean over a group
-          </TimeSeriesChart>
-        </div>
-
-        <div className="flex flex-wrap gap-4">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           {data.disks.map((d, idx) =>
             d.beta.length > 0 ? <ClusterMicroscope key={idx} disk={d} frame={i} color={CLUSTER_COLORS[idx]} index={idx} /> : null,
           )}
