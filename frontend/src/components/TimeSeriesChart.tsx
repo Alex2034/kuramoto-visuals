@@ -35,10 +35,13 @@ interface TimeSeriesChartProps {
   marks?: Mark[];
   /** One-line explanation of the marks, shown under the plot when there are any. */
   marksNote?: string;
+  /** What the chart shows, with every symbol defined; rendered under the plot. */
+  children?: React.ReactNode;
+  /** Height of the plot in the units of its 360-wide coordinate system. */
+  height?: number;
 }
 
 const W = 360;
-const H = 170;
 const M = { left: 46, right: 10, top: 8, bottom: 22 };
 const LOG_FLOOR = 1e-300;
 const NO_BACKGROUND: BackgroundLine[] = [];
@@ -48,6 +51,15 @@ function fmt(v: number): string {
   if (v === 0) return "0";
   const a = Math.abs(v);
   return a >= 1e4 || a < 1e-2 ? v.toExponential(1) : v.toPrecision(3);
+}
+
+/** Short form for the readout above the plot: two significant digits, at most 7 characters. */
+function fmtShort(v: number): string {
+  if (!Number.isFinite(v)) return "–";
+  if (v === 0) return "0";
+  const a = Math.abs(v);
+  if (a >= 1e4 || a < 1e-2) return v.toExponential(1);
+  return a >= 100 ? v.toFixed(0) : v.toPrecision(2);
 }
 
 export default function TimeSeriesChart({
@@ -60,6 +72,8 @@ export default function TimeSeriesChart({
   background = NO_BACKGROUND,
   marks = NO_MARKS,
   marksNote,
+  children,
+  height: H = 170,
 }: TimeSeriesChartProps) {
   const [hover, setHover] = useState<number | null>(null);
   const clipId = useId();
@@ -103,7 +117,7 @@ export default function TimeSeriesChart({
       lines: series.map((s) => path(s.values)),
       backgroundLines: background.map((b) => path(b.values)),
     };
-  }, [times, series, background, logY, yMin]);
+  }, [times, series, background, logY, yMin, H]);
 
   const { lo, hi, t0, t1, plotW, plotH, x, y, yOf } = plot;
   const tickLabel = (u: number) => (logY ? `1e${u.toFixed(0)}` : fmt(u));
@@ -120,13 +134,18 @@ export default function TimeSeriesChart({
 
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-3 shadow-sm">
-      <div className="text-sm font-medium">{title}</div>
-      <div className="mb-1 flex flex-wrap gap-x-3 text-xs text-gray-600">
-        <span>t = {fmt(times[shown])}</span>
+      {/* every value sits in a box of fixed width, so the entries do not move as the numbers change */}
+      <div className="flex items-baseline justify-between gap-2">
+        <div className="text-sm font-medium">{title}</div>
+        <div className="whitespace-nowrap text-xs tabular-nums text-gray-600">
+          t = <span className="inline-block w-[7ch]">{fmtShort(times[shown])}</span>
+        </div>
+      </div>
+      <div className="mb-1 flex flex-wrap gap-x-2 whitespace-nowrap text-xs tabular-nums text-gray-600">
         {series.map((s) => (
           <span key={s.name}>
             <span className="mr-1 inline-block h-2 w-2 rounded-full" style={{ background: s.color }} />
-            {s.name}: {fmt(s.values[shown])}
+            {s.name}: <span className="inline-block w-[7ch]">{fmtShort(s.values[shown])}</span>
           </span>
         ))}
       </div>
@@ -184,7 +203,8 @@ export default function TimeSeriesChart({
           );
         })}
       </svg>
-      {marks.length > 0 && marksNote && <div className="mt-1 text-xs text-gray-500">▼ {marksNote}</div>}
+      {marks.length > 0 && marksNote && <div className="mt-1 text-xs text-gray-600">▼ {marksNote}</div>}
+      {children && <div className="mt-1 text-xs leading-relaxed text-gray-600">{children}</div>}
     </div>
   );
 }

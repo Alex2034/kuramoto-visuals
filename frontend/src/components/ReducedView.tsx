@@ -6,20 +6,21 @@ import type { DiskView } from "@/lib/mobius";
 import PoincareDisk, { CHAIN_COLOR, CLUSTER_COLORS, chainColor, type DiskLayers } from "@/components/PoincareDisk";
 import ClusterMicroscope from "@/components/ClusterMicroscope";
 import TimeSeriesChart, { type BackgroundLine, type Mark, type Series } from "@/components/TimeSeriesChart";
+import { Tex } from "@/components/Tex";
 
 interface ReducedViewProps {
   data: ReducedResponse;
   frame: number;
 }
 
-const VIEWS: { id: DiskView; label: string; hint: string }[] = [
-  { id: "physical", label: "Physical", hint: "Oscillators as they are, with the barycenters of each cluster, of the chain and of all nodes inside the disk." },
-  { id: "centered", label: "Centered", hint: "Möbius-recentered at a cluster center (the cluster is the fixed constellation β rotated by ζ) or at the barycenter of all nodes." },
+const VIEWS: { id: DiskView; label: string }[] = [
+  { id: "physical", label: "Physical" },
+  { id: "centered", label: "Centered" },
 ];
 
 const LAYERS: { id: keyof DiskLayers; label: string }[] = [
-  { id: "potential", label: "Potential f" },
-  { id: "geodesics", label: "Chain geodesics" },
+  { id: "potential", label: "Potential map" },
+  { id: "geodesics", label: "Chain edges" },
 ];
 
 // a cluster narrower than e^-10 counts as collapsed
@@ -71,13 +72,16 @@ function velocityCurves(data: ReducedResponse): { means: Series[]; nodes: Backgr
     const columns = g.nodes.map(column);
     columns.forEach((values, j) => nodes.push({ color: g.nodeColor(j), values }));
     means.push({
-      name: `mean, ${g.name}`,
+      name: g.name,
       color: g.color,
       values: data.times.map((_, f) => columns.reduce((acc, c) => acc + c[f], 0) / columns.length),
     });
   }
   return { means, nodes };
 }
+
+// in the units of the chart's 360-wide coordinate system
+const CHART_HEIGHT = 126;
 
 export default function ReducedView({ data, frame }: ReducedViewProps) {
   const [view, setView] = useState<DiskView>("physical");
@@ -103,7 +107,7 @@ export default function ReducedView({ data, frame }: ReducedViewProps) {
           ? []
           : [
               {
-                name: `ρ − λt, cluster ${idx + 1}`,
+                name: `cluster ${idx + 1}`,
                 color: CLUSTER_COLORS[idx],
                 values: d.rho.map((rho, j) => rho - data.lambda_val * data.times[j]),
               },
@@ -114,8 +118,8 @@ export default function ReducedView({ data, frame }: ReducedViewProps) {
   const deficitSeries = useMemo(
     () =>
       [
-        ...data.disks.map((d, idx) => ({ name: `1 − |r|, cluster ${idx + 1}`, color: CLUSTER_COLORS[idx], values: d.r_deficit })),
-        ...(data.chain_deficit.length > 0 ? [{ name: "1 − |r|, chain", color: CHAIN_COLOR, values: data.chain_deficit }] : []),
+        ...data.disks.map((d, idx) => ({ name: `cluster ${idx + 1}`, color: CLUSTER_COLORS[idx], values: d.r_deficit })),
+        ...(data.chain_deficit.length > 0 ? [{ name: "chain", color: CHAIN_COLOR, values: data.chain_deficit }] : []),
         // a group of one node has |r| = 1 identically: nothing to plot on a log axis
       ].filter((s) => s.values.some((v) => v > 0)),
     [data],
@@ -132,7 +136,6 @@ export default function ReducedView({ data, frame }: ReducedViewProps) {
             <button
               key={v.id}
               onClick={() => setView(v.id)}
-              title={v.hint}
               className={`rounded-md px-3 py-1 font-medium ${view === v.id ? "bg-blue-600 text-white" : "bg-gray-200 hover:bg-gray-300"}`}
             >
               {v.label}
@@ -164,47 +167,43 @@ export default function ReducedView({ data, frame }: ReducedViewProps) {
             {l.label}
           </label>
         ))}
-        <span className="w-full text-xs text-gray-500">{VIEWS.find((v) => v.id === view)?.hint}</span>
       </div>
 
       <div className="flex flex-col gap-4">
-        <div className="flex flex-wrap items-start gap-4">
+        {/* the disk and, beside it, the three charts stacked; the chart height is chosen so both columns end together */}
+        <div className="grid grid-cols-1 items-stretch gap-4 xl:grid-cols-[minmax(0,6fr)_minmax(0,5fr)]">
           <PoincareDisk data={data} frame={i} view={view} selected={center} layers={layers} />
-          <div className="rounded-lg border border-gray-200 bg-white p-3 text-xs text-gray-600 shadow-sm">
-            t = {data.times[i].toPrecision(5)}
-            {data.tau !== null && (
-              <>
-                {" "}
-                · τ = 1/λ₂ = {data.tau.toPrecision(5)}
-                {data.tau_fit !== null && <> · fitted τ = {data.tau_fit.toPrecision(5)}</>}
-              </>
-            )}{" "}
-            · max |reduced − full| = {Math.max(...data.residual).toExponential(1)}
+          <div className="flex flex-col justify-between gap-4">
+            <TimeSeriesChart title="Hyperbolic radius of the clusters, minus λt" times={data.times} series={rhoSeries} cursor={i} height={CHART_HEIGHT}>
+              <Tex>{"|P|=\\tanh(\\rho/2)"}</Tex>, <Tex>{"P"}</Tex>: barycenter of a cluster
+            </TimeSeriesChart>
+            <TimeSeriesChart
+              title="Distance from synchrony, 1 − |r| (log scale)"
+              times={data.times}
+              series={deficitSeries}
+              cursor={i}
+              logY
+              yMin={deficitFloor}
+              marks={crossings}
+              marksNote="the attached node passes through its cluster"
+              height={CHART_HEIGHT}
+            >
+              <Tex>{"r=\\frac1n\\sum_j\\e^{\\ii\\theta_j}"}</Tex> over the <Tex>{"n"}</Tex> nodes of a group
+            </TimeSeriesChart>
+            <TimeSeriesChart
+              title="Angular velocities"
+              times={data.times}
+              series={velocity.means}
+              background={velocity.nodes}
+              cursor={i}
+              height={CHART_HEIGHT}
+            >
+              <Tex>{"\\dot\\theta_j"}</Tex>: thin, every node; thick, mean over a group
+            </TimeSeriesChart>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-          <TimeSeriesChart title="Hyperbolic radius minus its drift, ρ − λt" times={data.times} series={rhoSeries} cursor={i} />
-          <TimeSeriesChart
-            title="Order-parameter deficit, 1 − |r| (log)"
-            times={data.times}
-            series={deficitSeries}
-            cursor={i}
-            logY
-            yMin={deficitFloor}
-            marks={crossings}
-            marksNote="the attached node passes through its cluster (δ = 0): 1 − |r| of that cluster touches zero"
-          />
-          <TimeSeriesChart
-            title="Angular velocities: every node (thin) and group means"
-            times={data.times}
-            series={velocity.means}
-            background={velocity.nodes}
-            cursor={i}
-          />
-        </div>
-
-        <div className="flex flex-wrap gap-4">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           {data.disks.map((d, idx) =>
             d.beta.length > 0 ? <ClusterMicroscope key={idx} disk={d} frame={i} color={CLUSTER_COLORS[idx]} index={idx} /> : null,
           )}

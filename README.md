@@ -11,6 +11,8 @@ cd source
 latexmk -pdf main.tex
 ```
 
+The site shows the same formulas: `python3 scripts/extract_formulas.py` exports the labelled equations of `main.tex` to `frontend/src/lib/formulas.json`, which the frontend renders with KaTeX (tab "The model" and the captions next to the simulation).
+
 ## Architecture
 
 - **Backend** (FastAPI): Python computation (numpy, scipy) exposed via REST API

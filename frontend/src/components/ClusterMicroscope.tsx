@@ -2,6 +2,7 @@
 
 import type { DiskSeries } from "@/types/api";
 import { log10s } from "@/lib/mobius";
+import { Tex } from "@/components/Tex";
 
 interface ClusterMicroscopeProps {
   disk: DiskSeries;
@@ -28,13 +29,8 @@ export default function ClusterMicroscope({ disk, frame, color, index }: Cluster
 
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-      <div className="mb-1 flex items-baseline justify-between gap-4 text-sm">
-        <span className="font-medium">Microscope: offsets μ from the center of cluster {index + 1}</span>
-        <span className="whitespace-nowrap text-gray-600">
-          1 unit of μ = s = 10<sup>{exponent.toFixed(1)}</sup> rad
-        </span>
-      </div>
-      <svg width={W} height={H}>
+      <div className="mb-1 text-sm font-medium">Microscope: the inside of cluster {index + 1}</div>
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full">
         <line x1={PAD} x2={W - PAD} y1={44} y2={44} stroke="#c3c2b7" strokeWidth={1} />
         {TICKS.map((t) => (
           <g key={t}>
@@ -56,6 +52,10 @@ export default function ClusterMicroscope({ disk, frame, color, index }: Cluster
           </circle>
         ))}
       </svg>
+      <p className="text-xs text-gray-600">
+        <Tex>{`\\arg z_j-\\Theta=s\\,\\mu_j,\\qquad s=1-|w|\\approx10^{${exponent.toFixed(1)}}`}</Tex>; dots:{" "}
+        <Tex>{"\\mu_j"}</Tex>, <Tex>{"\\Theta"}</Tex>: phase of the cluster
+      </p>
     </div>
   );
 }
