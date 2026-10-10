@@ -2,15 +2,12 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import ParameterPanel, { type ReducedOptions } from "@/components/ParameterPanel";
-import KuramotoVisualization from "@/components/KuramotoVisualization";
 import ReducedView from "@/components/ReducedView";
 import AnimationControls from "@/components/AnimationControls";
-import type { ReducedParams, ReducedResponse, SimulateParams, SimulateResponse } from "@/types/api";
+import type { ReducedParams, ReducedResponse, SimulateParams } from "@/types/api";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 const REDUCED_FRAMES = 300;
-
-type Tab = "circle" | "disk";
 
 async function post<T>(path: string, body: unknown): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, {
@@ -27,17 +24,15 @@ async function post<T>(path: string, body: unknown): Promise<T> {
 }
 
 export default function Home() {
-  const [tab, setTab] = useState<Tab>("circle");
   const [params, setParams] = useState<SimulateParams>({
     N: 20,
     l: 20,
     lambda_val: 1.0,
-    kappa: 10.0,
+    kappa: 1.0,
     t_max: 1000,
     seed: 41,
   });
   const [reducedOptions, setReducedOptions] = useState<ReducedOptions>({ mode: "dumbbell", autoTime: true });
-  const [data, setData] = useState<SimulateResponse | null>(null);
   const [reduced, setReduced] = useState<ReducedResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -49,32 +44,27 @@ export default function Home() {
     setLoading(true);
     setError(null);
     try {
-      if (tab === "circle") {
-        setData(await post<SimulateResponse>("/simulate", params));
-      } else {
-        const body: ReducedParams = {
-          mode: reducedOptions.mode,
-          N: params.N,
-          l: params.l,
-          lambda_val: params.lambda_val,
-          kappa: params.kappa,
-          t_max: reducedOptions.autoTime ? null : params.t_max,
-          n_frames: REDUCED_FRAMES,
-          seed: params.seed,
-        };
-        setReduced(await post<ReducedResponse>("/simulate/reduced", body));
-      }
+      const body: ReducedParams = {
+        mode: reducedOptions.mode,
+        N: params.N,
+        l: params.l,
+        lambda_val: params.lambda_val,
+        kappa: params.kappa,
+        t_max: reducedOptions.autoTime ? null : params.t_max,
+        n_frames: REDUCED_FRAMES,
+        seed: params.seed,
+      };
+      setReduced(await post<ReducedResponse>("/simulate/reduced", body));
       setCurrentFrame(0);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unknown error");
-      if (tab === "circle") setData(null);
-      else setReduced(null);
+      setReduced(null);
     } finally {
       setLoading(false);
     }
-  }, [tab, params, reducedOptions]);
+  }, [params, reducedOptions]);
 
-  const totalFrames = tab === "circle" ? (data?.frames.length ?? 0) : (reduced?.times.length ?? 0);
+  const totalFrames = reduced?.times.length ?? 0;
 
   useEffect(() => {
     if (!isPlaying || totalFrames === 0) return;
@@ -87,33 +77,14 @@ export default function Home() {
   }, [isPlaying, totalFrames]);
 
   const frameIndex = Math.min(currentFrame, Math.max(totalFrames - 1, 0));
-  const frame = data?.frames[frameIndex] ?? null;
-  // the reduced grid is non-uniform, so show the time itself rather than a frame count
-  const timeLabel = tab === "disk" && reduced ? `t = ${reduced.times[frameIndex].toPrecision(4)}` : undefined;
-
-  const switchTab = (next: Tab) => {
-    setTab(next);
-    setError(null);
-    setCurrentFrame(0);
-  };
+  // the time grid is non-uniform, so show the time itself rather than only a frame count
+  const timeLabel = reduced ? `t = ${reduced.times[frameIndex].toPrecision(4)}` : undefined;
 
   return (
     <main className="min-h-screen bg-gray-100 p-6">
-      <h1 className="mb-4 text-2xl font-bold">
+      <h1 className="mb-6 text-2xl font-bold">
         Evolution of Kuramoto System on Dumbbell Graph
       </h1>
-
-      <div className="mb-6 flex gap-1">
-        {(["circle", "disk"] as Tab[]).map((t) => (
-          <button
-            key={t}
-            onClick={() => switchTab(t)}
-            className={`rounded-md px-4 py-1.5 text-sm font-medium ${tab === t ? "bg-blue-600 text-white" : "bg-gray-200 hover:bg-gray-300"}`}
-          >
-            {t === "circle" ? "Circle" : "Hyperbolic disk"}
-          </button>
-        ))}
-      </div>
 
       <div className="flex flex-col gap-6 lg:flex-row">
         <aside className="w-full shrink-0 lg:w-64">
@@ -122,7 +93,7 @@ export default function Home() {
             onChange={setParams}
             onRun={runSimulation}
             loading={loading}
-            reduced={tab === "disk" ? reducedOptions : undefined}
+            reduced={reducedOptions}
             onReducedChange={setReducedOptions}
           />
         </aside>
@@ -136,10 +107,16 @@ export default function Home() {
             onPlayPause={() => setIsPlaying((p) => !p)}
             label={timeLabel}
           />
-          {tab === "disk" && reduced && !error ? (
+          {error ? (
+            <div className="flex h-[600px] items-center justify-center rounded-lg border border-red-200 bg-red-50 text-red-700">
+              {error}
+            </div>
+          ) : reduced ? (
             <ReducedView data={reduced} frame={frameIndex} />
           ) : (
-            <KuramotoVisualization frame={tab === "circle" ? frame : null} error={error} />
+            <div className="flex h-[600px] items-center justify-center rounded-lg border border-gray-200 bg-gray-50 text-gray-500">
+              Click &quot;Run simulation&quot; to start
+            </div>
           )}
         </div>
       </div>

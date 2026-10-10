@@ -12,18 +12,26 @@ the cluster and T_P(z_j) = zeta * beta_j.
 import numpy as np
 from scipy.integrate import solve_ivp
 
-from kuramoto import build_dumbbell_adjacency, energy, fiedler, integrate_full
+from kuramoto import build_dumbbell_adjacency, energy, fiedler, integrate_full, kuramoto_ode
 from mobius import T, T_w_boundary, barycenter, microscope, potential_gauge, s_of_rho
 
 RTOL = 1e-11
 ATOL = 1e-12
 DISK = 4  # reals per disk: Re v, Im v, alpha, theta_N
+AUTO_TAUS = 3  # default run length in units of tau = 1/lambda_2
+
+
+MIN_CANONICAL = 3  # identical nodes needed for the conformal barycenter to exist
 
 
 def calibrate(theta_const: np.ndarray, theta_node: float) -> tuple[np.ndarray, np.ndarray]:
-    """Canonical gauge for one clique: returns (beta_angles, disk state at t = 0)."""
+    """
+    Gauge for one clique: returns (beta_angles, disk state at t = 0). Canonical gauge
+    (barycenter of beta at 0) when the clique has at least 3 identical nodes; otherwise the
+    barycenter does not exist and the gauge of the thesis is used, w(0) = 0, beta = z(0).
+    """
     z = np.exp(1j * theta_const)
-    p0 = barycenter(z)
+    p0 = barycenter(z) if z.size >= MIN_CANONICAL else 0j
     beta = np.angle(T(p0, z))
     r = abs(p0)
     v = -2 * np.arctanh(r) * p0 / r if r > 0 else 0j
@@ -113,15 +121,27 @@ def integrate_reduced(y0, betas, lam, kappa, N, l, t_eval, rtol=RTOL, atol=ATOL)
 
 
 def time_grid(lam: float, t_max: float, n_frames: int) -> np.ndarray:
-    """Dense up to 10/lambda (cluster collapse), then uniform up to t_max (chain relaxation)."""
-    t_fast = 10 / lam if lam > 0 else t_max
-    if t_fast >= t_max:
-        return np.linspace(0, t_max, n_frames)
-    n_fast = n_frames // 3
-    return np.concatenate((
-        np.linspace(0, t_fast, n_fast, endpoint=False),
-        np.linspace(t_fast, t_max, n_frames - n_fast),
-    ))
+    """
+    Output times t_k = A sinh(b k / (n - 1)): the step starts at the resolution needed for
+    the cluster collapse (10/lambda over a third of the frames) and grows smoothly, by a
+    constant factor per frame at late times, up to t_max. The step must not jump: frames are
+    played back at a fixed rate, so a jump in the step looks like a jump in the dynamics.
+    """
+    uniform = np.linspace(0, t_max, n_frames)
+    if lam <= 0:
+        return uniform
+    first_step = (10 / lam) / (n_frames // 3)
+    g = first_step * (n_frames - 1) / t_max  # = b / sinh(b)
+    if g >= 1:
+        return uniform
+    lo, hi = 1e-9, 50.0
+    for _ in range(100):
+        mid = (lo + hi) / 2
+        lo, hi = (mid, hi) if mid / np.sinh(mid) > g else (lo, mid)
+    b = (lo + hi) / 2
+    grid = t_max * np.sinh(b * np.arange(n_frames) / (n_frames - 1)) / np.sinh(b)
+    grid[-1] = t_max
+    return grid
 
 
 def cross_ratios(z: np.ndarray) -> np.ndarray:
@@ -142,12 +162,51 @@ def order_deficit(rho, phi, alpha, theta_node, beta, N) -> float:
     return float(one_minus_r2 / (1 + np.sqrt(max(1 - one_minus_r2, 0.0))))
 
 
+# below this distance from the boundary the global barycenter is not resolved in double precision
+GLOBAL_MIN_GAP = 1e-12
+
+
+def resolved_barycenter(theta: np.ndarray):
+    """Conformal barycenter of the given phases, or None when they are too close together to resolve it."""
+    if theta.size < 3:
+        return None
+    try:
+        p = barycenter(np.exp(1j * theta))
+    except ValueError:
+        return None
+    return None if 1 - abs(p) < GLOBAL_MIN_GAP else p
+
+
+def global_frame(theta: np.ndarray):
+    """
+    Conformal barycenter of all nodes and their phases in the frame centered at it.
+    Returns (center, angles), or (None, None) when the configuration is too narrow to resolve.
+    """
+    p = resolved_barycenter(theta)
+    if p is None:
+        return None, None
+    return [p.real, p.imag], np.angle(T(p, np.exp(1j * theta))).tolist()
+
+
+def phase_deficit(theta: np.ndarray) -> float:
+    """1 - |r| of a set of phases via 1 - |r|^2 = (4/n^2) sum_{i<j} sin^2((theta_i - theta_j)/2)."""
+    n = theta.size
+    pairs = np.sin((theta[:, None] - theta[None, :]) / 2) ** 2
+    one_minus_r2 = 2 * pairs.sum() / n**2
+    return float(one_minus_r2 / (1 + np.sqrt(max(1 - one_minus_r2, 0.0))))
+
+
 def wrap(x):
     return (x + np.pi) % (2 * np.pi) - np.pi
 
 
 def fit_tau(times: np.ndarray, gap: np.ndarray, tau: float):
-    """Decay time of |gap| ~ exp(-t/tau_fit), fitted on the late window [2 tau, 4 tau]."""
+    """
+    Decay time of |gap| ~ exp(-t/tau_fit), fitted on the late window [2 tau, 4 tau].
+    None when the run does not cover that window.
+    """
+    if times[-1] < 4 * tau:
+        return None
     mask = (times >= 2 * tau) & (times <= 4 * tau) & (gap > 0)
     if mask.sum() < 5:
         return None
@@ -185,10 +244,10 @@ def run_reduced(
         elif tau is None:
             raise ValueError("t_max is required when the graph is disconnected (kappa = 0)")
         else:
-            t_max = 5 * tau
+            t_max = AUTO_TAUS * tau
             if max_auto_t is not None and t_max > max_auto_t:
                 raise ValueError(
-                    f"default t_max = 5/lambda_2 = {t_max:.0f} exceeds {max_auto_t:.0f}; pass t_max explicitly"
+                    f"default t_max = {AUTO_TAUS}/lambda_2 = {t_max:.0f} exceeds {max_auto_t:.0f}; pass t_max explicitly"
                 )
 
     np.random.seed(seed)
@@ -221,6 +280,8 @@ def run_reduced(
         cr = np.array([cross_ratios(np.exp(1j * full[consts, i])) for i in np.flatnonzero(early)])
         drift = np.abs(cr / cr[0] - 1).max(axis=1) if cr.size else np.array([])
         disks.append({
+            # False for a clique with fewer than 3 identical nodes: P = -zeta w is then not a barycenter
+            "canonical": bool(beta.size >= MIN_CANONICAL),
             "beta": beta.tolist(),
             "rho": rho.tolist(),
             "phi": phi.tolist(),
@@ -248,9 +309,21 @@ def run_reduced(
         "tau_fit": None,
         "residual": residual.tolist(),
         "energy": [energy(theta_red[:, i], W) for i in range(len(times))],
+        # angular velocities of all nodes, in full-system node order
+        "velocity": [kuramoto_ode(times[i], theta_red[:, i], W).tolist() for i in range(len(times))],
         "gap": [],
+        "chain_deficit": [],
+        "global_center": [],
+        "global_angles": [],
+        "chain_center": [],
     }
     if n_disks == 2:
+        frames = [global_frame(theta_red[:, i]) for i in range(len(times))]
+        result["global_center"] = [c for c, _ in frames]
+        result["global_angles"] = [a for _, a in frames]
+        chain_centers = [resolved_barycenter(y[2 * DISK:, i]) for i in range(len(times))]
+        result["chain_center"] = [None if p is None else [p.real, p.imag] for p in chain_centers]
+        result["chain_deficit"] = [phase_deficit(y[2 * DISK:, i]) for i in range(len(times))]
         gap = np.abs(wrap(y[3] - y[DISK + 3]))
         result["gap"] = gap.tolist()
         if tau is not None:

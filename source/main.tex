@@ -1,0 +1,863 @@
+\documentclass[a4paper,11pt]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage[margin=2.6cm]{geometry}
+\usepackage{amsmath,amssymb,amsthm,mathtools}
+\usepackage{booktabs,array}
+\usepackage{enumitem}
+\usepackage[colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue]{hyperref}
+\usepackage[nameinlink]{cleveref}
+
+% Every key equation carries a stable label eq:<slug>. The slugs are referred to
+% from the code (docstrings, tests) and are the keys under which formulas are
+% exported to the user interface, so do not rename them casually.
+
+\newcommand{\conj}[1]{\overline{#1}}
+\newcommand{\T}{T}                       % T_p(z) = (z - p)/(1 - conj(p) z)
+\newcommand{\D}{\mathbb{D}}
+\newcommand{\bary}{\operatorname{bary}}
+\newcommand{\im}{\operatorname{Im}}
+\newcommand{\re}{\operatorname{Re}}
+\newcommand{\dd}{\mathrm{d}}
+\newcommand{\e}{\mathrm{e}}
+\newcommand{\ii}{\mathrm{i}}
+\newcommand{\code}[1]{\texttt{#1}}
+
+\newtheorem{proposition}{Proposition}
+\theoremstyle{remark}
+\newtheorem{remark}{Remark}
+
+\title{Kuramoto dynamics on a dumbbell graph:\\ reduction to the hyperbolic disk}
+\author{Mathematical notes for the \code{kuramoto-visuals} repository}
+\date{Supersedes the formulas of the bachelor thesis \code{v0.pdf}}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+These notes fix the mathematics behind the code in this repository. They start
+from the Kuramoto system on a dumbbell graph (two complete graphs joined by a
+chain), rewrite it in complex form, reduce each complete-graph component to the
+M\"obius group by the Watanabe--Strogatz ansatz, fix the gauge by the conformal
+barycenter, and end with the variables and formulas that are actually
+integrated and drawn. The starting point is the bachelor thesis kept next to
+this file as \code{v0.pdf}; where a formula below differs from the thesis this
+is said in a remark. The formulas are backed by numerical tests;
+\cref{sec:map} lists which.
+\end{abstract}
+
+\tableofcontents
+
+%======================================================================
+\section{Setting}\label{sec:setting}
+
+The graph has $2N+l$ vertices: two complete graphs on $N$ vertices and a chain
+of $l$ vertices between them. Vertices are numbered
+\[
+\underbrace{1,\dots,N}_{\text{first clique}},\qquad
+\underbrace{N+1,\dots,N+l}_{\text{chain}},\qquad
+\underbrace{N+l+1,\dots,2N+l}_{\text{second clique}},
+\]
+and the chain is attached to vertex $N$ of the first clique and to vertex
+$N+l+1$ of the second. We call these two the \emph{attached nodes}; the other
+$N-1$ vertices of a clique are its \emph{identical nodes}.
+
+We consider the Kuramoto model \cite{Kuramoto1975} on this graph. All
+oscillators have the same natural frequency, which is removed by passing to
+a rotating frame, and there is no noise. With symmetric weights $a_{ij}$ the
+system is
+\begin{equation}\label{eq:full-system}
+\dot\theta_i=\sum_{j} a_{ij}\,\sin(\theta_j-\theta_i),\qquad
+a_{ij}=\begin{cases}
+\lambda/N, & i\neq j \text{ in the same clique},\\
+\kappa, & i,j \text{ adjacent on the path } N,\,N+1,\dots,N+l+1,\\
+0, & \text{otherwise.}
+\end{cases}
+\end{equation}
+Written out,
+\begin{equation}\label{eq:full-system-explicit}
+\begin{aligned}
+\dot\theta_j&=\frac{\lambda}{N}\sum_{i=1}^{N}\sin(\theta_i-\theta_j), && j=1,\dots,N-1,\\
+\dot\theta_N&=\frac{\lambda}{N}\sum_{i=1}^{N-1}\sin(\theta_i-\theta_N)+\kappa\sin(\theta_{N+1}-\theta_N),\\
+\dot\theta_j&=\kappa\sin(\theta_{j-1}-\theta_j)+\kappa\sin(\theta_{j+1}-\theta_j), && j=N+1,\dots,N+l,\\
+\dot\theta_{N+l+1}&=\kappa\sin(\theta_{N+l}-\theta_{N+l+1})+\frac{\lambda}{N}\sum_{i=N+l+2}^{2N+l}\sin(\theta_i-\theta_{N+l+1}),\\
+\dot\theta_j&=\frac{\lambda}{N}\sum_{i=N+l+1}^{2N+l}\sin(\theta_i-\theta_j), && j=N+l+2,\dots,2N+l.
+\end{aligned}
+\end{equation}
+The system is invariant under a common shift of all phases.
+
+For a clique we use its own order parameter, the centroid of its $N$ points on
+the unit circle:
+\begin{equation}\label{eq:order-parameter}
+r=\frac1N\sum_{j\in\text{clique}}\e^{\ii\theta_j},\qquad 0\le |r|\le 1 .
+\end{equation}
+
+Both cliques are treated identically, so from \cref{sec:complete} on we write
+formulas for the first one, with identical nodes $1,\dots,N-1$, attached node
+$N$ and chain neighbor $N+1$. For the second clique replace these by
+$N+l+2,\dots,2N+l$, by $N+l+1$ and by $N+l$.
+
+%======================================================================
+\section{Complex form}\label{sec:complex}
+
+Put $z_j=\e^{\ii\theta_j}$. A phase equation driven by a complex field $H$,
+\begin{equation}\label{eq:riccati}
+\dot\theta=\im\bigl(H\,\conj z\bigr)
+\qquad\Longleftrightarrow\qquad
+\dot z=\tfrac12\bigl(H-\conj H\,z^2\bigr),
+\end{equation}
+is a Riccati equation for $z$; this follows from $\dot z=\ii z\dot\theta$ and
+$\im(H\conj z)=(H\conj z-\conj H z)/2\ii$. Since
+$\sum_i a\sin(\theta_i-\theta)=\im\bigl(a\sum_i z_i\,\conj z\bigr)$, the system
+\eqref{eq:full-system-explicit} becomes
+\begin{align}
+\dot z_j&=\frac\lambda2\bigl(r-\conj r\,z_j^2\bigr), \qquad j=1,\dots,N-1,
+\label{eq:complex-identical}\\
+\dot z_N&=\frac\lambda2\bigl(r-\conj r\,z_N^2\bigr)
++\frac\kappa2\bigl(z_{N+1}-\conj z_{N+1}\,z_N^2\bigr),
+\label{eq:complex-attached}\\
+\dot z_j&=\frac\kappa2\Bigl[(z_{j-1}+z_{j+1})-\conj{(z_{j-1}+z_{j+1})}\,z_j^2\Bigr],
+\qquad j=N+1,\dots,N+l,
+\label{eq:complex-chain}
+\end{align}
+with $r$ the order parameter \eqref{eq:order-parameter} of the first clique,
+which includes the attached node $z_N$. In \eqref{eq:complex-identical} the
+self-term of the sum cancels, so it may be included.
+
+The point of \eqref{eq:complex-identical} is that the $N-1$ identical nodes obey
+the \emph{same} Riccati equation with the same field $H=\lambda r(t)$. Nothing
+else about $r$ is used in the reduction: it may depend on time in any way.
+
+%======================================================================
+\section{The complete graph}\label{sec:complete}
+
+In this section $\kappa=0$ and we consider one clique alone, so that all $N$
+nodes obey \eqref{eq:complex-identical}. This is the classical case
+\cite{WatanabeStrogatz1994,MarvelMirolloStrogatz2009,ChenEngelbrechtMirollo2017}.
+
+\subsection{M\"obius action and the Watanabe--Strogatz ansatz}
+
+For $p\in\D=\{|z|<1\}$ let
+\begin{equation}\label{eq:mobius}
+\T_p(z)=\frac{z-p}{1-\conj p\,z},\qquad \T_p^{-1}=\T_{-p},\qquad \T_p(p)=0 .
+\end{equation}
+Every conformal automorphism of the disk is $z\mapsto\zeta\,\T_w(z)$ with
+$|\zeta|=1$, $w\in\D$; these maps preserve the unit circle and form a
+three-parameter group isomorphic to $PSU(1,1)\cong PSL(2,\mathbb R)$, the group
+of orientation-preserving isometries of the hyperbolic disk.
+
+A Riccati equation \eqref{eq:riccati} is the infinitesimal form of such a map.
+Hence points driven by a common field move by a common automorphism, and one
+looks for the solution in the form
+\begin{equation}\label{eq:ws-ansatz}
+z_j(t)=\zeta(t)\,\T_{w(t)}(\beta_j)=\zeta\,\frac{\beta_j-w}{1-\conj w\,\beta_j},
+\qquad |\zeta|=1,\quad |w|<1,\quad |\beta_j|=1,
+\end{equation}
+with constants $\beta_j$.
+
+\begin{proposition}\label{prop:ws}
+Let $H(t)$ be any complex function. The functions \eqref{eq:ws-ansatz} solve
+$\dot z_j=\tfrac12(H-\conj H z_j^2)$ for every constant $\beta_j$ on the unit
+circle if and only if
+\begin{align}
+\dot w&=-\tfrac12\,(1-|w|^2)\,\conj\zeta\,H,\label{eq:w-dot-general}\\
+\dot\zeta&=-\tfrac12\,\bigl(\conj w\,H-w\,\conj H\,\zeta^2\bigr).\label{eq:zeta-dot-general}
+\end{align}
+\end{proposition}
+The proof is a direct computation, given in Appendix~\ref{app:ws}. With $H=\lambda r$
+these are the equations (1.8) of the thesis.
+
+\paragraph{Meaning of the variables.}
+\begin{itemize}[nosep]
+\item $\zeta$ is a rigid rotation of the whole configuration. We write
+      $\zeta=\e^{\ii\alpha}$.
+\item $w$ measures how strongly the configuration $\beta$ is squeezed. The map
+      $\T_w$ pushes boundary points away from $w/|w|$ and towards $-w/|w|$; as
+      $|w|\to1$ every $\beta_j\neq w/|w|$ is sent to $-w/|w|$. Full
+      synchronization of the clique is $|w|\to1$.
+\item $\beta_j$ are constants of the motion. They are not unique: the triple
+      $(w,\zeta,\beta)$ has a three-parameter gauge freedom, fixed in
+      \cref{sec:gauge}.
+\end{itemize}
+
+\subsection{The closed equation for $w$}
+
+Insert the ansatz into the order parameter:
+\begin{equation}\label{eq:q-complete}
+q:=\conj\zeta\,r=\frac1N\sum_{j=1}^{N}\T_w(\beta_j),\qquad |q|=|r| .
+\end{equation}
+Then \eqref{eq:w-dot-general}, \eqref{eq:zeta-dot-general} with $H=\lambda r$
+read
+\begin{align}
+\dot w&=-\frac\lambda2\,(1-|w|^2)\,q,\label{eq:w-dot}\\
+\dot\alpha&=-\lambda\,\im\bigl(\conj w\,q\bigr).\label{eq:alpha-dot}
+\end{align}
+The first equation contains only $w$ and the constants: the $N$-dimensional
+dynamics is reduced to a flow on the disk, and $\alpha$ is found afterwards by
+a quadrature.
+
+\begin{remark}
+In the thesis the $\dot w$ equations (2.8), (2.10), (2.18) are printed with the
+denominator $1-w\beta_j$; it is $1-\conj w\beta_j$. The $\dot\zeta$ line of
+(2.8) lacks the weights: by \eqref{eq:alpha-dot},
+$\dot\zeta=-\tfrac\lambda2\,\zeta\,(\conj w q-w\conj q)$ and
+$\conj w\,\T_w(\beta)-\text{c.c.}
+=\frac{1-|w|^2}{|1-\conj w\beta|^2}\,(\conj w\beta-w\conj\beta)$.
+\end{remark}
+
+\subsection{Gradient flow in the hyperbolic metric}
+
+The Poisson kernel of the disk is
+\begin{equation}\label{eq:poisson}
+P(w,\beta)=\frac{1-|w|^2}{|w-\beta|^2},\qquad |\beta|=1 .
+\end{equation}
+It is the factor by which $\T_w$ stretches the circle at $\beta$:
+$P(w,\beta)=|\T_w'(\beta)|$. A direct differentiation gives the identity
+\begin{equation}\label{eq:poisson-gradient}
+(1-|w|^2)\,\frac{\partial}{\partial\conj w}\ln P(w,\beta)=\T_w(\beta).
+\end{equation}
+Define the potential and the hyperbolic gradient
+\begin{equation}\label{eq:potential-complete}
+f(w)=\frac1N\sum_{j=1}^{N}\ln P(w,\beta_j),\qquad
+\nabla_{\mathbb H}=\tfrac12\,(1-|w|^2)^2\,\frac{\partial}{\partial\conj w},
+\end{equation}
+the latter being the gradient for the metric
+$\dd s^2=4|\dd w|^2/(1-|w|^2)^2$. Summing \eqref{eq:poisson-gradient} over $j$
+turns \eqref{eq:w-dot} into
+\begin{equation}\label{eq:gradient-flow}
+\dot w=-\lambda\,\nabla_{\mathbb H}f(w),\qquad
+\frac{\dd f}{\dd t}=-\lambda\,|q|^2=-\lambda\,|r|^2\le0 .
+\end{equation}
+So $f$ is a Lyapunov function. It tends to $-\infty$ at the boundary away from
+the points $\beta_j$, and its only critical point in the disk is where
+$\sum_j\T_w(\beta_j)=0$, the conformal barycenter of $\beta$
+(\cref{sec:gauge}); this is a maximum, and the flow runs from it to the
+boundary.
+
+\begin{remark}
+In the thesis the first term of (2.12) is printed with $|w-\beta_j|$; the
+Poisson kernel has $|w-\beta_j|^2$.
+\end{remark}
+
+\subsection{First integrals}
+
+The cross-ratio
+\begin{equation}\label{eq:cross-ratio}
+(z_1,z_2,z_3,z_4)=\frac{z_1-z_3}{z_1-z_2}\cdot\frac{z_4-z_2}{z_4-z_3}
+\end{equation}
+is invariant under every M\"obius map, hence under the flow. Among $N$ points
+moved by one automorphism there are $N-3$ independent cross-ratios; these are
+the $N-3$ constants of motion of Watanabe and Strogatz.
+
+%======================================================================
+\section{The dumbbell: reduction of the cliques}\label{sec:reduction}
+
+Now $\kappa\neq0$. The attached node $N$ obeys \eqref{eq:complex-attached}, not
+\eqref{eq:complex-identical}, so it leaves the common M\"obius orbit. The
+$N-1$ identical nodes still obey \eqref{eq:complex-identical} with the common
+field $\lambda r$, and \cref{prop:ws} applies to them verbatim.
+
+\subsection{The reduced system}
+
+Describe the identical nodes by the ansatz \eqref{eq:ws-ansatz} with
+$j=1,\dots,N-1$ and keep the attached node as a variable. The order parameter
+of the clique becomes
+\begin{equation}\label{eq:q-def}
+q:=\conj\zeta\,r=\frac1N\Bigl[\,\sum_{j=1}^{N-1}\T_w(\beta_j)+\conj\zeta\,\e^{\ii\theta_N}\Bigr],
+\end{equation}
+and the equations are
+\begin{align}
+\dot w&=-\frac\lambda2\,(1-|w|^2)\,q,\tag{\ref{eq:w-dot}}\\
+\dot\alpha&=-\lambda\,\im\bigl(\conj w\,q\bigr),\tag{\ref{eq:alpha-dot}}\\
+\dot\theta_N&=\lambda\,\im\bigl(r\,\e^{-\ii\theta_N}\bigr)+\kappa\sin(\theta_{N+1}-\theta_N),
+\label{eq:node-dot}\\
+\dot\theta_j&=\kappa\sin(\theta_{j-1}-\theta_j)+\kappa\sin(\theta_{j+1}-\theta_j),
+\qquad j=N+1,\dots,N+l,\label{eq:chain-dot}
+\end{align}
+together with the same four equations for the second clique, whose attached
+node $N+l+1$ is coupled to $\theta_{N+l}$. In \eqref{eq:node-dot} $r=\zeta q$.
+The phases of the identical nodes are recovered from \eqref{eq:ws-ansatz}.
+
+\paragraph{Count.} Each clique contributes $w$ (two real numbers), $\alpha$ and
+$\theta_N$; with the chain this is $l+8$ real variables instead of $2N+l$. (The
+thesis counts $l+6$, taking each complex $w$ as one.) In each clique the
+$N-1$ identical nodes carry $N-4$ independent cross-ratios
+\eqref{eq:cross-ratio}, one fewer than for the isolated complete graph.
+
+\subsection{The form with $\psi$}
+
+The thesis keeps the attached node inside the ansatz by letting its ``constant''
+move:
+\begin{equation}\label{eq:psi-def}
+\psi:=\T_w^{-1}\bigl(\conj\zeta\,z_N\bigr),\qquad z_N=\zeta\,\T_w(\psi),\qquad \psi=\e^{\ii\chi}.
+\end{equation}
+For $\kappa=0$ this is one more constant. In general only the chain term moves
+it, divided by $\partial z_N/\partial\psi=\zeta(1-|w|^2)/(1-\conj w\psi)^2$:
+\begin{equation}\label{eq:psi-dot}
+\dot\psi=-\frac{\kappa}{2\,(1-|w|^2)}
+\Bigl[\zeta\,\conj z_{N+1}\,(\psi-w)^2-\conj\zeta\,z_{N+1}\,(1-\conj w\psi)^2\Bigr],
+\end{equation}
+or, in terms of the angle,
+\begin{equation}\label{eq:chi-dot}
+\dot\chi=\frac{\kappa\,\sin(\theta_{N+1}-\theta_N)}{P(w,\psi)} .
+\end{equation}
+Equations \eqref{eq:w-dot}, \eqref{eq:alpha-dot}, \eqref{eq:psi-dot} with
+$q=\frac1N\bigl[\sum_{j<N}\T_w(\beta_j)+\T_w(\psi)\bigr]$ are the system
+(2.8)--(2.10) of the thesis and are equivalent to
+\eqref{eq:w-dot}--\eqref{eq:node-dot}.
+
+The two forms differ in practice. As the clique synchronizes, $|w|\to1$ and
+$P(w,\psi)\to0$, so \eqref{eq:chi-dot} is singular: $\psi$ races towards
+$w/|w|$ while $\theta_N$ itself moves slowly. The code therefore integrates
+$\theta_N$ by \eqref{eq:node-dot} and never forms $\psi$.
+
+\subsection{The potential is no longer a Lyapunov function}
+
+With the moving point $\psi$ the potential \eqref{eq:potential-complete} becomes
+\begin{equation}\label{eq:potential}
+f(w,\psi)=\frac1N\Bigl[\,\sum_{j=1}^{N-1}\ln P(w,\beta_j)+\ln P(w,\psi)\Bigr],
+\end{equation}
+and by \eqref{eq:poisson-gradient} the equation for $w$ is still
+$\dot w=-\lambda\nabla_{\mathbb H}f$, now for a landscape that moves with
+$\psi$. Along solutions
+\begin{equation}\label{eq:f-dot}
+\frac{\dd f}{\dd t}=-\lambda\,|r|^2
++\frac{2\kappa}{N}\cdot\frac{\im(\conj w\,\psi)}{1-|w|^2}\cdot\sin(\theta_N-\theta_{N+1}).
+\end{equation}
+The second term has no definite sign and carries the factor $(1-|w|^2)^{-1}$,
+so $f$ need not decrease. The derivation is in Appendix~\ref{app:fdot}.
+
+\begin{remark}
+In the thesis the second term of (2.16)--(2.17) is printed without the factor
+$1/N$, which comes from the $1/N$ in front of $\ln P(w,\psi)$.
+\end{remark}
+
+%======================================================================
+\section{Gauge and frames}\label{sec:gauge}
+
+\subsection{Gauge freedom}
+
+The ansatz \eqref{eq:ws-ansatz} does not determine $(w,\zeta,\beta)$. For any
+automorphism $G$ of the disk, the constants $G(\beta_j)$ together with the map
+$\zeta\T_w\circ G^{-1}$ describe the same motion. The thesis and most of the
+literature take $w(0)=0$, $\zeta(0)=1$, $\beta_j=z_j(0)$. We use a different,
+canonical choice which gives $w$ a meaning independent of the initial instant.
+
+\subsection{Conformal barycenter}
+
+For points $z_1,\dots,z_n$ on the unit circle, $n\ge3$ distinct, the
+\emph{conformal barycenter} is the unique $p\in\D$ with
+\begin{equation}\label{eq:barycenter}
+\sum_{j=1}^{n}\T_p(z_j)=0,\qquad p=:\bary(z_1,\dots,z_n).
+\end{equation}
+Existence and uniqueness hold whenever no point carries half of the total mass
+or more \cite{DouadyEarle1986}. The barycenter is conformally natural: for
+every automorphism $M$ of the disk
+\begin{equation}\label{eq:bary-equivariance}
+\bary\bigl(M(z_1),\dots,M(z_n)\bigr)=M\bigl(\bary(z_1,\dots,z_n)\bigr).
+\end{equation}
+By \eqref{eq:poisson-gradient} it is the critical point of
+$p\mapsto\sum_j\ln P(p,z_j)$.
+
+\paragraph{Computation.} Newton's method in the frame recentered at the current
+guess. With $y_j=\T_p(z_j)$, $m=\frac1n\sum y_j$ and $B=\frac1n\sum y_j^2$,
+\begin{equation}\label{eq:bary-newton}
+d=\frac{m+B\,\conj m}{1-|B|^2},\qquad p\leftarrow\T_{-p}(d)=\frac{d+p}{1+\conj p\,d},
+\end{equation}
+because $\frac1n\sum\T_d(y_j)=m-d+B\conj d+O(|d|^2)$. If $|d|\ge1$ the step
+$d=m$ is taken instead.
+
+\subsection{Canonical gauge}
+
+This needs at least three identical nodes, $N\ge4$. (For $N\le3$ the
+barycenter of the identical nodes does not exist; the reduction is still exact
+in any gauge, the code then uses $w(0)=0$, $\beta_j=z_j(0)$, and no cluster
+center is drawn.) We require $\bary(\beta_1,\dots,\beta_{N-1})=0$ and $\zeta(0)=1$. Given the
+initial phases, with $z_j=z_j(0)$ for the identical nodes,
+\begin{equation}\label{eq:calibration}
+p_0=\bary(z_1,\dots,z_{N-1}),\qquad \beta_j=\T_{p_0}(z_j),\qquad
+w(0)=-p_0,\qquad \zeta(0)=1,
+\end{equation}
+which reproduces the initial data since $\T_{-p_0}=\T_{p_0}^{-1}$. In this gauge,
+by \eqref{eq:bary-equivariance} applied to $M=\zeta\T_w$ and $M(0)=-\zeta w$,
+\begin{equation}\label{eq:center}
+P:=-\zeta\,w=\bary(z_1,\dots,z_{N-1})\qquad\text{at every time.}
+\end{equation}
+Thus $P$ is a gauge-independent point of the disk attached to the cluster, its
+\emph{center}. It starts wherever the initial configuration puts it and runs to
+the boundary as the cluster collapses. Moreover
+\begin{equation}\label{eq:centered-frame}
+\T_P(z)=\zeta\,\T_{-w}\bigl(\conj\zeta\,z\bigr),\qquad\text{hence}\qquad
+\T_P(z_j)=\zeta\,\beta_j ,\quad j=1,\dots,N-1 .
+\end{equation}
+
+\subsection{Three frames}\label{sec:frames}
+
+The same state can be drawn in three ways. The user interface shows the first
+two, and the variant of the second from \cref{sec:global}; the third is the
+frame of the thesis.
+\begin{description}[leftmargin=1.5em]
+\item[Physical frame.] The oscillators $z_j$ themselves, and the center $P$
+      inside the disk.
+\item[Centered frame.] Everything mapped by $\T_P$. The cluster center is at
+      the origin and by \eqref{eq:centered-frame} the cluster is the fixed
+      constellation $\beta$ rotated rigidly by $\zeta$. All other points are
+      seen through the same M\"obius lens; when the cluster has collapsed they
+      all sit near the single boundary point $\zeta\,\e^{\ii\varphi}$,
+      $\varphi=\arg w$.
+\item[Gauge frame.] Everything mapped by $z\mapsto\T_w^{-1}(\conj\zeta z)$,
+      \begin{equation}\label{eq:gauge-frame}
+      \T_w^{-1}\bigl(\conj\zeta\,z_j\bigr)=\beta_j,\qquad
+      \T_w^{-1}\bigl(\conj\zeta\,z_N\bigr)=\psi,\qquad
+      \T_w^{-1}(0)=w .
+      \end{equation}
+      The constellation $\beta$ does not move at all, the attached node is the
+      point $\psi$ of \eqref{eq:psi-def}, and $w$ is the image of the physical
+      origin. This is the frame of the thesis: $w$ moves over the landscape
+      $f(\cdot,\psi)$ by \eqref{eq:gradient-flow}.
+\end{description}
+The gauge frame is the centered frame rotated by $\conj\zeta$.
+
+\paragraph{Potentials in the frames.} Let
+$F(p)=\frac1N\sum_{j=1}^{N}\ln P(p,z_j)$ be the potential built from the
+current physical points of the clique. Since $P(p,z)=|\T_p'(z)|$ and $\T_P$
+inverts $\zeta\T_w$ up to a rotation,
+\begin{equation}\label{eq:potential-frames}
+F(P)=-f(w,\psi).
+\end{equation}
+In the physical frame the part of $F$ coming from the identical nodes has its
+maximum at $P$ by construction, so that picture shows where the center is, not
+a descent. The descent of \eqref{eq:gradient-flow} is seen in the gauge frame.
+
+\subsection{The global center}\label{sec:global}
+
+The centered frame of a cluster is tied to one clique. After that clique has
+collapsed it shows the rest of the system as a single boundary point, so it
+says nothing about the slow stage. A frame for the whole system is obtained
+from the barycenter of \emph{all} nodes,
+\begin{equation}\label{eq:global-center}
+P_{\mathrm{all}}:=\bary(z_1,\dots,z_{2N+l}),\qquad
+\sum_{j=1}^{2N+l}\T_{P_{\mathrm{all}}}(z_j)=0 .
+\end{equation}
+It exists as long as fewer than half of the nodes coincide; a collapsed cluster
+carries the fraction $(N-1)/(2N+l)<\tfrac12$. In the frame $\T_{P_{\mathrm{all}}}$
+the configuration is balanced at every time, so it cannot shrink to a point:
+when in the physical frame all phases have gathered in a short arc, this frame
+shows the shape of that arc magnified. There is no single M\"obius map moving
+all nodes, so nothing is rigid in this frame, in contrast to
+\eqref{eq:centered-frame}.
+
+The interface also marks the barycenter of the chain nodes alone,
+\begin{equation}\label{eq:chain-center}
+P_{\mathrm{chain}}:=\bary(z_{N+1},\dots,z_{N+l}),
+\end{equation}
+next to $P_{\mathrm{all}}$ and the two cluster centers; in a frame centered at
+some $p$ each of these points is drawn at its image under $\T_p$.
+
+In double precision $P_{\mathrm{all}}$ is computed from the phases themselves
+and is resolved while $1-|P_{\mathrm{all}}|\gtrsim10^{-12}$, that is while the
+arc is wider than about $10^{-6}$; for $N=l=20$, $\lambda=1$, $\kappa=10$ this
+holds up to $t\approx13\,\tau$.
+
+%======================================================================
+\section{Exponential coordinates}\label{sec:coordinates}
+
+Near synchrony $1-|w|$ is exponentially small, so $w$ is a bad variable. Use
+the hyperbolic distance $\rho$ from the origin and the direction $\varphi$:
+\begin{equation}\label{eq:v-def}
+w=\tanh\!\frac\rho2\;\e^{\ii\varphi},\qquad v:=\rho\,\e^{\ii\varphi},\qquad
+\rho=2\operatorname{artanh}|w| .
+\end{equation}
+The complex number $v$ is the coordinate of $w$ in the exponential map of the
+hyperbolic disk at the origin; unlike $(\rho,\varphi)$ it is smooth at
+$\rho=0$. Equation \eqref{eq:w-dot} becomes
+\begin{equation}\label{eq:v-dot}
+\dot v=-\lambda\Bigl[\frac{1+c}{2}\,q+\frac{k}{2}\,v^2\,\conj q\Bigr],\qquad
+c=\frac{\rho}{\sinh\rho},\qquad k=\frac{1-c}{\rho^2},
+\end{equation}
+with $c\to1$, $k\to\frac16$ as $\rho\to0$ and $c\to0$ as $\rho\to\infty$. In
+components (Appendix~\ref{app:vdot}),
+\begin{equation}\label{eq:rho-dot}
+\dot\rho=-\lambda\,\re\bigl(\e^{-\ii\varphi}q\bigr),\qquad
+\dot\varphi=-\frac{\lambda}{\sinh\rho}\,\im\bigl(\e^{-\ii\varphi}q\bigr).
+\end{equation}
+The stiff factor $(1-|w|^2)$ is gone and $\rho$ grows at a bounded rate.
+
+\paragraph{State.} The integrated state of a clique is
+$(\re v,\im v,\alpha,\theta_N)$, with right-hand side
+\eqref{eq:v-dot}, \eqref{eq:alpha-dot}, \eqref{eq:node-dot}.
+
+\paragraph{Late times.} Define the cluster phase and the offset of the attached
+node from it,
+\begin{equation}\label{eq:cluster-phase}
+\Theta:=\alpha+\varphi+\pi=\arg P,\qquad \delta:=\theta_N-\Theta .
+\end{equation}
+Once the cluster has collapsed, $\T_w(\beta_j)\to-\e^{\ii\varphi}$ and
+$\e^{-\ii\varphi}q\to-\frac{N-1}{N}-\frac1N\e^{\ii\delta}$, so that
+\begin{equation}\label{eq:rho-late}
+\dot\rho\to\lambda\Bigl[1-\frac{1-\cos\delta}{N}\Bigr],\qquad
+\dot\Theta\to\frac{\lambda}{N}\sin\delta .
+\end{equation}
+Hence $\rho=\lambda t+O(1)$, the width of the cluster decays like
+$\e^{-\lambda t}$, and the informative quantity is $\rho-\lambda t$, which
+converges as $\delta\to0$.
+
+%======================================================================
+\section{Numerically stable forms}\label{sec:stable}
+
+In double precision $1-|w|$ is lost at $\rho\approx37$, $\e^{-\rho}$ underflows
+at $\rho\approx745$ and $\e^{\rho}$ overflows at $\rho\approx709$, while a run
+to full synchrony reaches $\rho$ in the thousands. All formulas below are
+written in the small quantity
+\begin{equation}\label{eq:s-def}
+s:=1-\tanh\frac\rho2=\frac{2\,\e^{-\rho}}{1+\e^{-\rho}},\qquad
+1-|w|^2=s\,(2-s),
+\end{equation}
+which is computed without cancellation and simply becomes $0$ for very large
+$\rho$. In particular
+\begin{equation}\label{eq:log-one-minus}
+\ln(1-|w|^2)=2\Bigl[\ln2-\frac\rho2-\ln\bigl(1+\e^{-\rho}\bigr)\Bigr]
+\end{equation}
+is finite for every $\rho$.
+
+\paragraph{M\"obius map of a boundary point.} For $\beta=\e^{\ii b}$ put
+$\gamma=b-\varphi$, $u=\e^{\ii\gamma}$ and compute
+$1-u=-2\ii\sin\frac\gamma2\,\e^{\ii\gamma/2}$. Then
+\begin{equation}\label{eq:stable-mobius}
+\T_w(\beta)=\e^{\ii\varphi}\,\frac{s-(1-u)}{(1-u)+s\,u}\;\xrightarrow[\;s\to0\;]{}\;-\e^{\ii\varphi}.
+\end{equation}
+
+\paragraph{Microscope.} After collapse all phases of the cluster agree to
+machine precision, but their arrangement is still determined. Write
+\begin{equation}\label{eq:microscope}
+\arg z_j-\Theta=\arg\bigl(1-s\,x_j\bigr)=:s\,\mu_j,\qquad
+x_j=\frac{1+u_j}{(1-u_j)+s\,u_j},
+\end{equation}
+which follows from $\T_w(\beta_j)/(-\e^{\ii\varphi})=1-s\,x_j$. For
+$s|x_j|<10^{-8}$ one uses $\mu_j=-\im x_j$. The rescaled offsets have a limit,
+\begin{equation}\label{eq:microscope-limit}
+\mu_j\to-\cot\frac{\gamma_j}{2}\qquad(\rho\to\infty),
+\end{equation}
+so the collapsed cluster keeps a fixed shape, shrinking like $s$.
+
+\paragraph{Order-parameter deficit.} From
+$|r|^2=\frac1{N^2}\sum_{i,j}\cos(\theta_i-\theta_j)$,
+\begin{equation}\label{eq:deficit}
+1-|r|^2=\frac{4}{N^2}\sum_{i<j}\sin^2\frac{\theta_i-\theta_j}{2},\qquad
+1-|r|=\frac{1-|r|^2}{1+|r|},
+\end{equation}
+where the differences are taken from the microscope:
+$\theta_i-\theta_j=s(\mu_i-\mu_j)$ between identical nodes and
+$\theta_N-\theta_j=\delta-s\mu_j$. For a collapsed cluster
+\begin{equation}\label{eq:deficit-late}
+1-|r|^2=\frac{4(N-1)}{N^2}\sin^2\frac\delta2,\qquad
+1-|r|\approx\frac{N-1}{2N^2}\,\delta^2 ,
+\end{equation}
+so at late times $1-|r|$ decays at twice the rate of $\delta$. If $\delta$
+changes sign, that is if the attached node passes through the phase of its
+collapsed cluster, $1-|r|$ of that clique drops at that instant to the order of
+the squared width of the cluster and comes back; this is a property of the
+solution, not a numerical effect. The first
+formula of \eqref{eq:deficit} applies to any set of phases; the interface also
+plots it for the $l$ chain nodes alone, with $N$ replaced by $l$.
+
+\paragraph{Potential.} In \eqref{eq:potential} the point $\psi$ is not formed.
+Using $\ln P(w,\psi)=-\ln P\bigl(-w,\T_w(\psi)\bigr)$ and
+$|w-\e^{\ii b}|=|(1-u)-s|$,
+\begin{equation}\label{eq:stable-potential}
+f=\frac1N\Bigl[\sum_{j=1}^{N-1}\bigl(\Lambda-2\ln|(1-u_j)-s|\bigr)
+-\Lambda+2\ln|(1-u_N)-s|\Bigr],
+\end{equation}
+with $\Lambda=\ln(1-|w|^2)$ from \eqref{eq:log-one-minus},
+$u_j=\e^{\ii(b_j-\varphi)}$ and $u_N=\e^{\ii(\theta_N-\alpha-\varphi-\pi)}=\e^{\ii\delta}$.
+At late times $f\approx\frac{N-2}{N}\Lambda\to-\infty$ linearly in $\rho$.
+
+%======================================================================
+\section{Linear analysis and time scales}\label{sec:linear}
+
+\subsection{Energy}
+
+The full system \eqref{eq:full-system} is the gradient flow of
+\begin{equation}\label{eq:energy}
+E(\theta)=-\sum_{i<j}a_{ij}\cos(\theta_i-\theta_j),\qquad
+\dot\theta=-\nabla E,\qquad \dot E=-|\dot\theta|^2\le0 .
+\end{equation}
+Unlike $f$, the energy is a Lyapunov function of the whole system for all
+$\lambda,\kappa$. Its minimum $E=-\sum_{i<j}a_{ij}$ is full synchrony.
+
+\subsection{Synchrony and the slow time scale}
+
+Linearizing \eqref{eq:full-system} at $\theta_1=\dots=\theta_{2N+l}$ gives
+$\dot\varepsilon=-L\varepsilon$ with the weighted graph Laplacian
+\begin{equation}\label{eq:laplacian}
+L=\operatorname{diag}\Bigl(\sum_j a_{ij}\Bigr)-A,\qquad
+\varepsilon^{\mathsf T}L\,\varepsilon=\sum_{i<j}a_{ij}(\varepsilon_i-\varepsilon_j)^2\ge0 .
+\end{equation}
+$L$ is symmetric and positive semidefinite; its kernel is the common phase
+shift, and since the graph is connected for $\lambda,\kappa>0$ all other
+eigenvalues are positive. Full synchrony is therefore linearly stable. (The
+thesis reaches the same conclusion with Gershgorin discs.) The slowest
+relaxation is governed by the second eigenvalue,
+\begin{equation}\label{eq:tau}
+0=\lambda_1<\lambda_2\le\dots,\qquad \tau:=\frac{1}{\lambda_2} .
+\end{equation}
+
+There are thus two time scales. The cliques collapse at rate $\lambda$
+(\cref{sec:coordinates}); afterwards the chain and the two collapsed clusters
+relax at rate $\lambda_2$, which for a long chain is much smaller.
+\Cref{tab:tau} compares $\tau$ with the decay time fitted to
+$|\theta_N-\theta_{N+l+1}|$ on the window $[2\tau,4\tau]$ of a run of the
+reduced system.
+
+\begin{table}[ht]
+\centering
+\begin{tabular}{rrrrrr}
+\toprule
+$N$ & $l$ & $\lambda$ & $\kappa$ & $1/\lambda_2$ & fitted $\tau$\\
+\midrule
+10 & 10 & 1 & 1 & 70.9134 & 70.9137\\
+20 & 20 & 1 & 1 & 259.4064 & 259.4127\\
+20 & 20 & 5 & 1 & 246.0971 & 246.1038\\
+20 & 20 & 1 & 5 & 65.8902 & 65.9081\\
+20 & 40 & 1 & 1 & 561.8780 & 561.8788\\
+40 & 10 & 2 & 0.5 & 474.0627 & 474.0808\\
+\bottomrule
+\end{tabular}
+\caption{Slow time scale: prediction $1/\lambda_2$ and fit, runs up to $5\tau$,
+initial phases uniform with seed $0$. Produced by \code{backend/scripts/timescales.py}.}
+\label{tab:tau}
+\end{table}
+
+\subsection{The collapsed-cluster system}
+
+The set where the identical nodes of each clique coincide,
+$\theta_1=\dots=\theta_{N-1}=\Theta_1$ and
+$\theta_{N+l+2}=\dots=\theta_{2N+l}=\Theta_2$, is invariant. On it the system
+is exactly
+\begin{equation}\label{eq:collapsed}
+\begin{aligned}
+\dot\Theta_1&=\frac\lambda N\sin(\theta_N-\Theta_1),\\
+\dot\theta_N&=\frac{N-1}{N}\,\lambda\sin(\Theta_1-\theta_N)+\kappa\sin(\theta_{N+1}-\theta_N),\\
+\dot\theta_j&=\kappa\sin(\theta_{j-1}-\theta_j)+\kappa\sin(\theta_{j+1}-\theta_j),
+\qquad j=N+1,\dots,N+l,
+\end{aligned}
+\end{equation}
+and symmetrically at the other end: $l+4$ phases. This is what the dynamics
+becomes after the fast stage; the first line is the second relation of
+\eqref{eq:rho-late}. Its linearization at synchrony has the same slowest rate
+$\lambda_2$ as the full system.
+
+In the phase differences $\Delta_N=\theta_N-\Theta_1$,
+$\Delta_j=\theta_j-\theta_{j-1}$ ($N<j\le N+l$) the first equations read
+\begin{equation}\label{eq:relative}
+\begin{aligned}
+\dot\Delta_N&=-\lambda\sin\Delta_N+\kappa\sin\Delta_{N+1},\\
+\dot\Delta_{N+1}&=\frac{N-1}{N}\,\lambda\sin\Delta_N-2\kappa\sin\Delta_{N+1}+\kappa\sin\Delta_{N+2},\\
+\dot\Delta_j&=\kappa\bigl(\sin\Delta_{j+1}-2\sin\Delta_j+\sin\Delta_{j-1}\bigr),
+\qquad N+1<j<N+l .
+\end{aligned}
+\end{equation}
+
+\begin{remark}
+These are the relative variables of section 4.4 of the thesis with the
+deviations $\varepsilon_j$ set to zero. In (4.22) of the thesis the coefficient
+of $\sin\Delta_N$ in $\dot\Delta_{N+1}$ is printed as $\lambda$; it is
+$\frac{N-1}{N}\lambda$.
+\end{remark}
+
+\subsection{Stationary states}
+
+On the invariant set of \eqref{eq:collapsed} stationarity forces, from the
+first line, $\sin\Delta_N=0$, then from the second $\sin\Delta_{N+1}=0$, and so
+on along the chain: every difference is $0$ or $\pi$. A difference equal to
+$\pi$ is unstable: the corresponding edges form a cut of the graph on which
+all weights enter the Hessian of $E$ as $a_{ij}\cos\pi<0$, and the indicator
+vector of one side of the cut is a direction of negative curvature. Hence full
+synchrony is the only stable stationary state with collapsed clusters. This
+does not classify the stationary states of the full system with non-collapsed
+cliques; numerically none other than synchrony is ever reached from uniformly
+random initial phases.
+
+\subsection{Two reference states}
+
+Numerically the state at intermediate times is close to ``collapsed clusters
+joined by an arithmetic progression along the chain''. Such states are not
+stationary; their velocity fields are as follows ($A$ is the step of the
+progression).
+
+If the progression runs through the attached nodes and the clusters sit one
+step beyond them,
+\[
+\theta_j=A\cdot\min\{\max\{j,N-1\},N+l+2\}\quad\text{up to a constant,}
+\]
+then
+\begin{equation}\label{eq:state-one}
+\dot\theta_j=\sin A\cdot
+\begin{cases}
+\phantom{-}\lambda/N, & j\le N-1,\\
+\phantom{-}\kappa-\frac{N-1}{N}\lambda, & j=N,\\
+\phantom{-}0, & N<j\le N+l,\\
+-\kappa+\frac{N-1}{N}\lambda, & j=N+l+1,\\
+-\lambda/N, & j\ge N+l+2 .
+\end{cases}
+\end{equation}
+If instead the clusters and the attached nodes sit on the ends of the chain,
+\[
+\theta_j=A\cdot\min\{\max\{j,N+1\},N+l\}\quad\text{up to a constant,}
+\]
+then
+\begin{equation}\label{eq:state-two}
+\dot\theta_{N+1}=\kappa\sin A,\qquad \dot\theta_{N+l}=-\kappa\sin A,\qquad
+\dot\theta_j=0\ \text{ otherwise.}
+\end{equation}
+These are (4.10) and (4.13) of the thesis.
+
+%======================================================================
+\section{Formulas and code}\label{sec:map}
+
+\Cref{tab:map} lists where each formula is implemented and which test checks
+it. Backend modules are in \code{backend/}; ``frontend'' means the file
+\code{frontend/src/lib/mobius.ts}; tests are in \code{backend/tests/}.
+
+\begin{table}[ht]
+\centering
+\footnotesize
+\renewcommand{\_}{\textunderscore\allowbreak}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\begin{tabular}{@{}L{0.25\textwidth}L{0.32\textwidth}L{0.38\textwidth}@{}}
+\toprule
+Formula & Implementation & Test\\
+\midrule
+\eqref{eq:full-system} & \code{kuramoto.kuramoto\_ode}, \code{build\_dumbbell\_adjacency} & reference for all others\\
+\eqref{eq:mobius} & \code{mobius.T}, \code{T\_inv} & \code{test\_inverse\_and\_circle\_preserved}\\
+\eqref{eq:ws-ansatz}, \eqref{eq:w-dot}, \eqref{eq:alpha-dot}, \eqref{eq:node-dot}, \eqref{eq:chain-dot}, \eqref{eq:v-dot}
+  & \code{reduced.disk\_rhs}, \code{reduced\_rhs}, \code{reconstruct}
+  & \code{test\_reduced\_rhs\_is\_the\_full\_rhs}, \code{test\_dumbbell\_matches\_full\_system}\\
+\eqref{eq:poisson-gradient}, \eqref{eq:gradient-flow} & \code{mobius.log\_poisson} & \code{test\_gradient\_form\_of\_w\_equation}, \code{test\_isolated\_complete\_graph}\\
+\eqref{eq:cross-ratio} & \code{reduced.cross\_ratios} & \code{test\_isolated\_complete\_graph}\\
+\eqref{eq:psi-dot}, \eqref{eq:chi-dot} & not used in code & \code{test\_psi\_form\_matches\_theta\_form}\\
+\eqref{eq:potential}, \eqref{eq:stable-potential}, \eqref{eq:log-one-minus} & \code{mobius.potential\_gauge}, \code{log\_one\_minus\_w2} & \code{test\_potential\_rate\_identity}\\
+\eqref{eq:f-dot} & --- & \code{test\_potential\_rate\_identity}\\
+\eqref{eq:barycenter}, \eqref{eq:bary-equivariance}, \eqref{eq:bary-newton} & \code{mobius.barycenter} & \code{test\_barycenter\_zero\_mean\_and\_equivariance}\\
+\eqref{eq:calibration} & \code{reduced.calibrate}, \code{initial\_state} & \code{test\_calibration\_reproduces\_initial\_phases}\\
+\eqref{eq:center}, \eqref{eq:centered-frame}, \eqref{eq:gauge-frame}, \eqref{eq:potential-frames}
+  & frontend \code{clusterCenter}, \code{toFrame}, \code{potential}
+  & \code{test\_barycenter\_gauge\_identities}, \code{test\_frames}\\
+\eqref{eq:global-center}, \eqref{eq:chain-center} & \code{reduced.global\_frame}, \code{resolved\_barycenter} & \code{test\_dumbbell\_matches\_full\_system}\\
+\eqref{eq:v-def}, \eqref{eq:s-def} & \code{mobius.w\_from\_v}, \code{v\_from\_w}, \code{s\_of\_rho} & \code{test\_v\_w\_roundtrip}\\
+\eqref{eq:rho-dot}, \eqref{eq:rho-late}, \eqref{eq:deficit-late} & --- & \code{test\_rho\_rate}\\
+\eqref{eq:stable-mobius} & \code{mobius.T\_w\_boundary}, frontend \code{tBoundary} & \code{test\_stable\_T\_w\_matches\_naive}, \code{test\_stable\_T\_w\_matches\_mpmath}\\
+\eqref{eq:microscope}, \eqref{eq:microscope-limit} & \code{mobius.microscope} & \code{test\_microscope\_definition\_and\_limit}\\
+\eqref{eq:deficit} & \code{reduced.order\_deficit}, \code{phase\_deficit} & \code{test\_dumbbell\_matches\_full\_system}\\
+\eqref{eq:energy} & \code{kuramoto.energy} & \code{test\_energy\_is\_a\_gradient\_flow}\\
+\eqref{eq:laplacian}, \eqref{eq:tau} & \code{kuramoto.fiedler}, \code{reduced.fit\_tau} & \code{test\_linearization\_at\_synchrony\_is\_minus\_laplacian}, \code{test\_dumbbell\_matches\_full\_system}\\
+\eqref{eq:collapsed} & --- & \code{test\_collapsed\_cluster\_system}\\
+\eqref{eq:state-one}, \eqref{eq:state-two} & --- & \code{test\_near\_observed\_states}\\
+\bottomrule
+\end{tabular}
+\caption{Formula, implementation, test.}
+\label{tab:map}
+\end{table}
+
+\paragraph{Numerical setup.} The reduced and the full system are integrated
+with an explicit Runge--Kutta method of order 8 (\code{DOP853}) at relative
+tolerance $10^{-11}$, on output times $t_k\propto\sinh(bk)$ up to $t=3\tau$ by default: the step
+is fine during the collapse of the cliques and grows smoothly afterwards. For $N=l=20$, $\lambda=\kappa=1$ and a run up to $t=5\tau$ the
+reconstructed phases agree with the full system to about $10^{-8}$ throughout,
+while $\rho$ reaches $\approx1300$.
+
+%======================================================================
+\appendix
+
+\section{Proof of Proposition~\ref{prop:ws}}\label{app:ws}
+
+Differentiate $z=\zeta(\beta-w)/(1-\conj w\beta)$ at constant $\beta$:
+\[
+\frac{\dot z}{z}=\frac{\dot\zeta}{\zeta}-\frac{\dot w}{\beta-w}
++\frac{\dot{\conj w}\,\beta}{1-\conj w\beta}.
+\]
+Let $y=\conj\zeta z=\T_w(\beta)$, so that $\beta=(y+w)/(1+\conj w y)$,
+\[
+\beta-w=\frac{(1-|w|^2)\,y}{1+\conj w y},\qquad
+1-\conj w\beta=\frac{1-|w|^2}{1+\conj w y}.
+\]
+Substituting and multiplying by $z=\zeta y$,
+\[
+\dot z=-\frac{\zeta\,\dot w}{1-|w|^2}
++\Bigl[\dot\zeta+\zeta\,\frac{w\,\dot{\conj w}-\conj w\,\dot w}{1-|w|^2}\Bigr]y
++\frac{\zeta\,\dot{\conj w}}{1-|w|^2}\,y^2 .
+\]
+This must equal $\tfrac12(H-\conj H\zeta^2y^2)$ for all $y$ on the circle, i.e.\
+coefficient by coefficient. The constant term gives
+\eqref{eq:w-dot-general}; the coefficient of $y^2$ gives its complex
+conjugate; the coefficient of $y$ must vanish, which with
+\eqref{eq:w-dot-general} is
+$\dot\zeta=\zeta(\conj w\dot w-w\dot{\conj w})/(1-|w|^2)
+=-\tfrac12(\conj wH-w\conj H\zeta^2)$, that is \eqref{eq:zeta-dot-general}.
+\qed
+
+\section{Derivation of \eqref{eq:v-dot}}\label{app:vdot}
+
+Write $q=\e^{\ii\varphi}(q_\parallel+\ii q_\perp)$ with real
+$q_\parallel,q_\perp$. From \eqref{eq:w-dot} and $|w|=\tanh\frac\rho2$,
+$\dd|w|/\dd\rho=\tfrac12(1-|w|^2)$:
+\[
+\dot\rho=-\lambda q_\parallel,\qquad
+\dot\varphi=-\frac\lambda2\,\frac{1-|w|^2}{|w|}\,q_\perp
+=-\frac{\lambda}{\sinh\rho}\,q_\perp ,
+\]
+which is \eqref{eq:rho-dot}. Then
+$\dot v=\e^{\ii\varphi}(\dot\rho+\ii\rho\dot\varphi)
+=-\lambda\,\e^{\ii\varphi}(q_\parallel+\ii c\,q_\perp)$. Since
+$v^2\conj q=\rho^2\e^{\ii\varphi}(q_\parallel-\ii q_\perp)$,
+\[
+\frac{1+c}{2}\,q+\frac{1-c}{2\rho^2}\,v^2\conj q
+=\e^{\ii\varphi}(q_\parallel+\ii c\,q_\perp),
+\]
+which gives \eqref{eq:v-dot}.
+
+\section{Derivation of \eqref{eq:f-dot}}\label{app:fdot}
+
+$f$ depends on time through $w$ and through $\chi=\arg\psi$. The first
+contribution is, by \eqref{eq:gradient-flow}, $-\lambda|q|^2=-\lambda|r|^2$.
+For the second, only the term $\frac1N\ln P(w,\psi)$ depends on $\chi$, and
+\[
+\frac{\partial}{\partial\chi}\ln P(w,\psi)
+=-\frac{\partial}{\partial\chi}\ln|\psi-w|^2
+=-\frac{2\,\im(\conj w\,\psi)}{|\psi-w|^2}.
+\]
+Multiplying by \eqref{eq:chi-dot},
+$\dot\chi=\kappa\sin(\theta_{N+1}-\theta_N)\,|\psi-w|^2/(1-|w|^2)$, and by
+$1/N$ gives the second term of \eqref{eq:f-dot}.
+
+%======================================================================
+\begin{thebibliography}{9}
+
+\bibitem{Kuramoto1975}
+Y.~Kuramoto, Self-entrainment of a population of coupled non-linear
+oscillators, in \emph{International Symposium on Mathematical Problems in
+Theoretical Physics}, Lecture Notes in Physics, Springer, 1975.
+
+\bibitem{WatanabeStrogatz1994}
+S.~Watanabe and S.~H.~Strogatz, Constants of motion for superconducting
+Josephson arrays, \emph{Physica D} \textbf{74} (1994), 197--253.
+
+\bibitem{MarvelMirolloStrogatz2009}
+S.~A.~Marvel, R.~E.~Mirollo and S.~H.~Strogatz, Identical phase oscillators
+with global sinusoidal coupling evolve by M\"obius group action, \emph{Chaos}
+\textbf{19} (2009), 043104.
+
+\bibitem{ChenEngelbrechtMirollo2017}
+B.~Chen, J.~R.~Engelbrecht and R.~Mirollo, Hyperbolic geometry of Kuramoto
+oscillator networks, \emph{J.~Phys.~A: Math.~Theor.} \textbf{50} (2017),
+355101.
+
+\bibitem{DouadyEarle1986}
+A.~Douady and C.~J.~Earle, Conformally natural extension of homeomorphisms of
+the circle, \emph{Acta Math.} \textbf{157} (1986), 23--48.
+
+\end{thebibliography}
+
+\end{document}

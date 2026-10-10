@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { ReducedResponse } from "@/types/api";
 import type { DiskView } from "@/lib/mobius";
-import PoincareDisk, { CLUSTER_COLORS, type DiskLayers } from "@/components/PoincareDisk";
+import PoincareDisk, { CHAIN_COLOR, CLUSTER_COLORS, chainColor, type DiskLayers } from "@/components/PoincareDisk";
 import ClusterMicroscope from "@/components/ClusterMicroscope";
-import TimeSeriesChart, { type Series } from "@/components/TimeSeriesChart";
+import TimeSeriesChart, { type BackgroundLine, type Mark, type Series } from "@/components/TimeSeriesChart";
 
 interface ReducedViewProps {
   data: ReducedResponse;
@@ -13,26 +13,116 @@ interface ReducedViewProps {
 }
 
 const VIEWS: { id: DiskView; label: string; hint: string }[] = [
-  { id: "physical", label: "Physical", hint: "Oscillators as they are; ◎ is the conformal barycenter P = −ζw of each cluster." },
-  { id: "centred", label: "Centred", hint: "Möbius-recentred at P: the cluster is the fixed constellation β rotated by ζ." },
-  { id: "gauge", label: "Gauge", hint: "β fixed; w(t) moves over the landscape f(w, ψ) of eq. (2.12)." },
+  { id: "physical", label: "Physical", hint: "Oscillators as they are, with the barycenters of each cluster, of the chain and of all nodes inside the disk." },
+  { id: "centered", label: "Centered", hint: "Möbius-recentered at a cluster center (the cluster is the fixed constellation β rotated by ζ) or at the barycenter of all nodes." },
 ];
 
 const LAYERS: { id: keyof DiskLayers; label: string }[] = [
   { id: "potential", label: "Potential f" },
   { id: "geodesics", label: "Chain geodesics" },
-  { id: "full", label: "Full-system overlay" },
 ];
+
+// a cluster narrower than e^-10 counts as collapsed
+const COLLAPSED_RHO = 10;
+const wrapAngle = (a: number) => a - 2 * Math.PI * Math.round(a / (2 * Math.PI));
+
+/**
+ * Instants at which the attached node passes through the phase of its collapsed cluster:
+ * delta = theta_N - Theta changes sign, and 1 - |r| of that cluster drops to zero there.
+ */
+function nodeCrossings(data: ReducedResponse): Mark[] {
+  const marks: Mark[] = [];
+  data.disks.forEach((d, idx) => {
+    if (d.beta.length === 0) return; // a one-node clique has no cluster to pass through
+    const delta = d.theta_node.map((th, j) => wrapAngle(th - (d.alpha[j] + d.phi[j] + Math.PI)));
+    for (let j = 0; j + 1 < delta.length; j++) {
+      if (d.rho[j] < COLLAPSED_RHO || delta[j] * delta[j + 1] >= 0) continue;
+      const u = delta[j] / (delta[j] - delta[j + 1]);
+      const t = data.times[j] + u * (data.times[j + 1] - data.times[j]);
+      marks.push({
+        t,
+        color: CLUSTER_COLORS[idx],
+        label: `t = ${t.toPrecision(4)}: the attached node passes through cluster ${idx + 1}`,
+      });
+    }
+  });
+  return marks;
+}
+
+/**
+ * Angular velocities: one thin line per node, and the mean over each group
+ * (the N nodes of a clique, the l nodes of the chain) as a series.
+ */
+function velocityCurves(data: ReducedResponse): { means: Series[]; nodes: BackgroundLine[] } {
+  const { N, l } = data;
+  const column = (j: number) => data.velocity.map((frame) => frame[j]);
+  const range = (from: number, count: number) => Array.from({ length: count }, (_, j) => from + j);
+  const groups =
+    data.disks.length === 2
+      ? [
+          { name: "cluster 1", color: CLUSTER_COLORS[0], nodes: range(0, N), nodeColor: () => CLUSTER_COLORS[0] },
+          { name: "cluster 2", color: CLUSTER_COLORS[1], nodes: range(N + l, N), nodeColor: () => CLUSTER_COLORS[1] },
+          { name: "chain", color: CHAIN_COLOR, nodes: range(N, l), nodeColor: (j: number) => chainColor(j, l) },
+        ]
+      : [{ name: "cluster 1", color: CLUSTER_COLORS[0], nodes: range(0, N), nodeColor: () => CLUSTER_COLORS[0] }];
+  const means: Series[] = [];
+  const nodes: BackgroundLine[] = [];
+  for (const g of groups) {
+    const columns = g.nodes.map(column);
+    columns.forEach((values, j) => nodes.push({ color: g.nodeColor(j), values }));
+    means.push({
+      name: `mean, ${g.name}`,
+      color: g.color,
+      values: data.times.map((_, f) => columns.reduce((acc, c) => acc + c[f], 0) / columns.length),
+    });
+  }
+  return { means, nodes };
+}
 
 export default function ReducedView({ data, frame }: ReducedViewProps) {
   const [view, setView] = useState<DiskView>("physical");
-  const [selected, setSelected] = useState(0);
-  const [layers, setLayers] = useState<DiskLayers>({ potential: true, full: false, geodesics: true });
+  const [selected, setSelected] = useState<number | "all">(0);
+  const [layers, setLayers] = useState<DiskLayers>({ potential: true, geodesics: true });
 
   const i = Math.min(frame, data.times.length - 1);
-  const k = Math.min(selected, data.disks.length - 1);
-  const perDisk = (pick: (d: ReducedResponse["disks"][number]) => number[], symbol: string): Series[] =>
-    data.disks.map((d, idx) => ({ name: `${symbol}${idx + 1}`, color: CLUSTER_COLORS[idx], values: pick(d) }));
+  // the view can be centered only on a cluster that has a barycenter; otherwise fall back to all nodes
+  const dumbbell = data.disks.length > 1;
+  const center: number | "all" =
+    selected !== "all" && data.disks[Math.min(selected, data.disks.length - 1)].canonical
+      ? Math.min(selected, data.disks.length - 1)
+      : dumbbell
+        ? "all"
+        : 0;
+  const crossings = useMemo(() => nodeCrossings(data), [data]);
+  const velocity = useMemo(() => velocityCurves(data), [data]);
+  const rhoSeries = useMemo(
+    () =>
+      data.disks.flatMap((d, idx) =>
+        // w describes the identical nodes; a one-node clique has none
+        d.beta.length === 0
+          ? []
+          : [
+              {
+                name: `ρ − λt, cluster ${idx + 1}`,
+                color: CLUSTER_COLORS[idx],
+                values: d.rho.map((rho, j) => rho - data.lambda_val * data.times[j]),
+              },
+            ],
+      ),
+    [data],
+  );
+  const deficitSeries = useMemo(
+    () =>
+      [
+        ...data.disks.map((d, idx) => ({ name: `1 − |r|, cluster ${idx + 1}`, color: CLUSTER_COLORS[idx], values: d.r_deficit })),
+        ...(data.chain_deficit.length > 0 ? [{ name: "1 − |r|, chain", color: CHAIN_COLOR, values: data.chain_deficit }] : []),
+        // a group of one node has |r| = 1 identically: nothing to plot on a log axis
+      ].filter((s) => s.values.some((v) => v > 0)),
+    [data],
+  );
+  // the axis ends a decade below the smallest final value, so a zero crossing does not stretch it
+  const finals = deficitSeries.map((s) => s.values[s.values.length - 1]).filter((v) => v > 0);
+  const deficitFloor = finals.length > 0 ? Math.min(...finals) / 10 : undefined;
 
   return (
     <div className="flex flex-col gap-4">
@@ -49,15 +139,22 @@ export default function ReducedView({ data, frame }: ReducedViewProps) {
             </button>
           ))}
         </div>
-        {data.disks.length > 1 && (
+        {view === "centered" && dumbbell && (
           <label className="flex items-center gap-2 text-gray-600">
-            Cluster
-            <select value={k} onChange={(e) => setSelected(parseInt(e.target.value, 10))} className="rounded border border-gray-300 px-1 py-0.5">
-              {data.disks.map((_, idx) => (
-                <option key={idx} value={idx}>
-                  {idx + 1}
-                </option>
-              ))}
+            Center
+            <select
+              value={center}
+              onChange={(e) => setSelected(e.target.value === "all" ? "all" : parseInt(e.target.value, 10))}
+              className="rounded border border-gray-300 px-1 py-0.5"
+            >
+              {data.disks.map((d, idx) =>
+                d.canonical ? (
+                  <option key={idx} value={idx}>
+                    cluster {idx + 1}
+                  </option>
+                ) : null,
+              )}
+              <option value="all">all nodes</option>
             </select>
           </label>
         )}
@@ -72,37 +169,45 @@ export default function ReducedView({ data, frame }: ReducedViewProps) {
 
       <div className="flex flex-col gap-4">
         <div className="flex flex-wrap items-start gap-4">
-          <PoincareDisk data={data} frame={i} view={view} selected={k} layers={layers} />
-          <div className="flex flex-col gap-4">
-            <ClusterMicroscope disk={data.disks[k]} frame={i} color={CLUSTER_COLORS[k]} index={k} />
-            <div className="rounded-lg border border-gray-200 bg-white p-3 text-xs text-gray-600 shadow-sm">
-              t = {data.times[i].toPrecision(5)}
-              {data.tau !== null && (
-                <>
-                  {" "}
-                  · τ = 1/λ₂ = {data.tau.toPrecision(5)}
-                  {data.tau_fit !== null && <> · fitted τ = {data.tau_fit.toPrecision(5)}</>}
-                </>
-              )}{" "}
-              · max |reduced − full| = {Math.max(...data.residual).toExponential(1)}
-            </div>
+          <PoincareDisk data={data} frame={i} view={view} selected={center} layers={layers} />
+          <div className="rounded-lg border border-gray-200 bg-white p-3 text-xs text-gray-600 shadow-sm">
+            t = {data.times[i].toPrecision(5)}
+            {data.tau !== null && (
+              <>
+                {" "}
+                · τ = 1/λ₂ = {data.tau.toPrecision(5)}
+                {data.tau_fit !== null && <> · fitted τ = {data.tau_fit.toPrecision(5)}</>}
+              </>
+            )}{" "}
+            · max |reduced − full| = {Math.max(...data.residual).toExponential(1)}
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <TimeSeriesChart title="Hyperbolic radius minus its drift, ρ − λt" times={data.times} series={rhoSeries} cursor={i} />
           <TimeSeriesChart
-            title="Hyperbolic radius minus its drift, ρ − λt"
+            title="Order-parameter deficit, 1 − |r| (log)"
             times={data.times}
-            series={perDisk((d) => d.rho.map((rho, j) => rho - data.lambda_val * data.times[j]), "ρ − λt, cluster ")}
-            cursor={i}
-          />
-          <TimeSeriesChart
-            title="Cluster order-parameter deficit, 1 − |r| (log)"
-            times={data.times}
-            series={perDisk((d) => d.r_deficit, "1 − |r|, cluster ")}
+            series={deficitSeries}
             cursor={i}
             logY
+            yMin={deficitFloor}
+            marks={crossings}
+            marksNote="the attached node passes through its cluster (δ = 0): 1 − |r| of that cluster touches zero"
           />
+          <TimeSeriesChart
+            title="Angular velocities: every node (thin) and group means"
+            times={data.times}
+            series={velocity.means}
+            background={velocity.nodes}
+            cursor={i}
+          />
+        </div>
+
+        <div className="flex flex-wrap gap-4">
+          {data.disks.map((d, idx) =>
+            d.beta.length > 0 ? <ClusterMicroscope key={idx} disk={d} frame={i} color={CLUSTER_COLORS[idx]} index={idx} /> : null,
+          )}
         </div>
       </div>
     </div>

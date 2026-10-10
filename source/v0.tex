@@ -1,0 +1,37 @@
+\documentclass[a4paper, 12pt]{report}
+
+%% подключаем стандарт библиографии
+\bibliographystyle{gost71u} 
+
+%% for envirovemt "abstract" in class book
+%\newenvironment{abstract}{}{}
+%\usepackage{abstract}
+
+%% подключаем преамбулу, в ней содержатся подключение всех необходимых пакетов
+\input{include/preambule.tex}
+    
+\begin{document}
+    %% титульник
+    %\input{include/title.tex}
+    %% аннотоция
+    \input{parts/Annotation.tex}
+    %содержание
+    \setcounter{page}{3}
+    \tableofcontents{}
+
+    \input{parts/Chapter0.tex} %% Благодарности
+    \input{parts/Chapter1.tex} %% Введение
+    \input{parts/Chapter2.tex} %% Гиперболическое
+    \input{parts/Chapter3.tex} %% Численное
+    \input{parts/Chapter4.tex} %% Попытки в аналитические результаты
+    \input{parts/Chapter5.tex} %% Заключение
+
+    %% Don't change the following lines
+    \newpage
+    \nocite{*}
+    \bibliography{references}
+
+    %% в зависимости от надобности подключаем раздел "Приложениие"
+    \newpage
+    \input{parts/Appendix}
+\end{document}

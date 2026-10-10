@@ -2,6 +2,15 @@
 
 Visualization of the Kuramoto model on a dumbbell graph: two complete graphs connected by a chain.
 
+## Mathematics
+
+`source/main.pdf` (built from `source/main.tex`) is the reference for all formulas: the system, its complex form, the Watanabe–Strogatz reduction, the gauge, the integrated variables and the numerically stable forms, with a table mapping each formula to its implementation and test. `source/v0.pdf` is the bachelor thesis it grew out of.
+
+```bash
+cd source
+latexmk -pdf main.tex
+```
+
 ## Architecture
 
 - **Backend** (FastAPI): Python computation (numpy, scipy) exposed via REST API
@@ -54,6 +63,7 @@ kuramoto_vis/
 │       ├── app/
 │       ├── components/
 │       └── types/
+├── source/               # main.tex / main.pdf: mathematical notes; v0: thesis
 └── streamlit_example.py  # Original monolithic reference
 ```
 

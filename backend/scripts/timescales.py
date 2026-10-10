@@ -27,7 +27,9 @@ CASES = [
 def fitted_vs_predicted():
     print("N    l    lambda  kappa   1/lambda_2    fitted tau   rel.diff   max residual")
     for N, l, lam, kappa in CASES:
-        res = run_reduced(N, l, lam, kappa, seed=0, n_frames=300)
+        # the fit window is [2 tau, 4 tau], so run past it
+        t_max = 5 / fiedler(build_dumbbell_adjacency(N, l, lam, kappa))
+        res = run_reduced(N, l, lam, kappa, t_max=t_max, seed=0, n_frames=300)
         tau, fit = res["tau"], res["tau_fit"]
         print(
             f"{N:<4} {l:<4} {lam:<7} {kappa:<7} {tau:<13.4f} {fit:<12.4f} "

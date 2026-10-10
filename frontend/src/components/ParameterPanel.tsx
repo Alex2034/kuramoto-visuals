@@ -4,7 +4,7 @@ import type { ReducedMode, SimulateParams } from "@/types/api";
 
 export interface ReducedOptions {
   mode: ReducedMode;
-  /** Use t_max = 5/lambda_2 (dumbbell) instead of the slider. */
+  /** Use t_max = 3/lambda_2 (dumbbell) instead of the slider. */
   autoTime: boolean;
 }
 
@@ -55,7 +55,7 @@ export default function ParameterPanel({
           <span className="text-sm text-gray-600">Size of complete graphs (N)</span>
           <input
             type="range"
-            min={5}
+            min={1}
             max={50}
             value={params.N}
             onChange={(e) => update("N", parseInt(e.target.value, 10))}
@@ -69,7 +69,7 @@ export default function ParameterPanel({
             <span className="text-sm text-gray-600">Chain length (l)</span>
             <input
               type="range"
-              min={5}
+              min={1}
               max={50}
               value={params.l}
               onChange={(e) => update("l", parseInt(e.target.value, 10))}
@@ -116,7 +116,7 @@ export default function ParameterPanel({
               checked={reduced.autoTime}
               onChange={(e) => onReducedChange({ ...reduced, autoTime: e.target.checked })}
             />
-            {complete ? "Automatic time (30/λ)" : "Automatic time (5/λ₂)"}
+            {complete ? "Automatic time (30/λ)" : "Automatic time (3/λ₂)"}
           </label>
         )}
 

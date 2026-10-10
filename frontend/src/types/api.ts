@@ -7,23 +7,6 @@ export interface SimulateParams {
   seed: number;
 }
 
-export interface Point {
-  index: number;
-  x: number;
-  y: number;
-  nodeType: "component" | "chain";
-}
-
-export interface Frame {
-  t: number;
-  points: Point[];
-}
-
-export interface SimulateResponse {
-  times: number[];
-  frames: Frame[];
-}
-
 export type ReducedMode = "dumbbell" | "complete";
 
 export interface ReducedParams {
@@ -39,6 +22,8 @@ export interface ReducedParams {
 
 /** One clique in WS variables: w = tanh(rho/2) e^{i phi}, zeta = e^{i alpha}; arrays are per frame. */
 export interface DiskSeries {
+  /** False for a clique with fewer than 3 identical nodes: it has no conformal barycenter, so no center is drawn. */
+  canonical: boolean;
   beta: number[];
   rho: number[];
   phi: number[];
@@ -67,5 +52,15 @@ export interface ReducedResponse {
   tau_fit: number | null;
   residual: number[];
   energy: number[];
+  /** Angular velocities of all nodes per frame, in full-system node order. */
+  velocity: number[][];
   gap: number[];
+  /** 1 - |r| of the chain nodes alone. Empty in complete mode. */
+  chain_deficit: number[];
+  /** Conformal barycenter of all nodes per frame; null where it is not resolved. Empty in complete mode. */
+  global_center: ([number, number] | null)[];
+  /** Phases of all nodes in the frame centered at global_center, in full-system node order. */
+  global_angles: (number[] | null)[];
+  /** Conformal barycenter of the chain nodes per frame; null where it is not resolved. */
+  chain_center: ([number, number] | null)[];
 }

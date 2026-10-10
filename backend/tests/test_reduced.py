@@ -115,14 +115,59 @@ def test_isolated_complete_graph():
 )
 def test_dumbbell_matches_full_system(N, l, lam, kappa, seed):
     res = run_reduced(N, l, lam, kappa, seed=seed, n_frames=240)
-    assert res["times"][-1] == pytest.approx(5 / fiedler(build_dumbbell_adjacency(N, l, lam, kappa)))
+    tau = 1 / fiedler(build_dumbbell_adjacency(N, l, lam, kappa))
+    assert res["times"][-1] == pytest.approx(3 * tau)
     assert max(res["residual"]) < 1e-7
-    assert res["tau_fit"] == pytest.approx(res["tau"], rel=0.01)
+    assert res["tau_fit"] is None  # the default run stops before the fit window [2 tau, 4 tau]
+    long = run_reduced(N, l, lam, kappa, t_max=5 * tau, seed=seed, n_frames=240)
+    assert max(long["residual"]) < 1e-7
+    assert long["tau_fit"] == pytest.approx(tau, rel=0.01)
+    chain = np.exp(1j * np.array(res["chain"]))
+    assert np.allclose(res["chain_deficit"], 1 - np.abs(chain.mean(axis=1)), atol=1e-12)
     assert np.all(np.diff(res["energy"]) <= 1e-9)
+    velocity_full = np.array([kuramoto_ode(0.0, np.array(th), build_dumbbell_adjacency(N, l, lam, kappa)) for th in res["full"]])
+    assert np.allclose(res["velocity"], velocity_full, atol=1e-5)
+    # eq:global-center: every frame is resolved on the default run and is balanced
+    assert all(a is not None for a in res["global_angles"])
+    balanced = np.exp(1j * np.array(res["global_angles"])).mean(axis=1)
+    assert np.abs(balanced).max() < 1e-9
+    # the global center is the barycenter of the full system's phases, frame by frame
+    for i in (0, len(res["times"]) // 2, len(res["times"]) - 1):
+        z_full = np.exp(1j * np.array(res["full"][i]))
+        assert abs(barycenter(z_full) - complex(*res["global_center"][i])) < 1e-6
+        # eq:chain-center
+        z_chain = np.exp(1j * np.array(res["chain"][i]))
+        assert abs(T(complex(*res["chain_center"][i]), z_chain).mean()) < 1e-9
     for disk in res["disks"]:
         deficit, r_abs = np.array(disk["r_deficit"]), np.array(disk["r_abs"])
         assert np.all(deficit > 0)
         assert np.allclose(deficit, 1 - r_abs, atol=1e-12)
+
+
+@pytest.mark.parametrize("N,l", [(1, 1), (1, 6), (2, 1), (2, 3), (3, 2), (4, 1), (5, 1)])
+def test_small_graphs(N, l):
+    """Cliques with fewer than 3 identical nodes have no barycenter; the reduction must still be exact."""
+    res = run_reduced(N, l, 1.0, 1.0, seed=3, n_frames=120)
+    assert len(res["full"][0]) == 2 * N + l
+    assert max(res["residual"]) < 1e-7
+    assert np.all(np.diff(res["energy"]) <= 1e-9)
+    for disk in res["disks"]:
+        assert disk["canonical"] == (N >= 4)
+        assert len(disk["beta"]) == N - 1
+        for key in ("rho", "phi", "alpha", "theta_node", "r_abs", "r_deficit", "f"):
+            assert np.all(np.isfinite(disk[key])), key
+        assert np.all(np.isfinite(np.array(disk["mu"], dtype=float)))
+        assert np.allclose(disk["r_deficit"], 1 - np.array(disk["r_abs"]), atol=1e-12)
+    assert np.all(np.isfinite(res["velocity"]))
+    assert all(c is None for c in res["chain_center"]) == (l < 3)
+
+
+@pytest.mark.parametrize("N", [1, 2, 3, 4])
+def test_small_complete_graphs(N):
+    res = run_reduced(N, 0, 1.0, 0.0, seed=3, n_frames=60, mode="complete")
+    assert len(res["full"][0]) == N
+    assert max(res["residual"]) < 1e-7
+    assert np.all(np.isfinite(res["disks"][0]["f"]))
 
 
 def test_long_run_stays_finite():
