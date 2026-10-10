@@ -65,7 +65,7 @@ def run_simulation(
     kappa: float,
     t_max: float,
     n_frames: int = 100,
-    seed: int = 42,
+    seed: int = 41,
 ) -> dict:
     """
     Run Kuramoto simulation and return data suitable for frontend.

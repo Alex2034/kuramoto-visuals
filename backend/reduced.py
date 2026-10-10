@@ -162,7 +162,7 @@ def run_reduced(
     kappa: float,
     t_max: float | None = None,
     n_frames: int = 300,
-    seed: int = 42,
+    seed: int = 41,
     mode: str = "dumbbell",
     max_auto_t: float | None = None,
 ) -> dict:

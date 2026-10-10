@@ -32,9 +32,9 @@ export default function Home() {
     N: 20,
     l: 20,
     lambda_val: 1.0,
-    kappa: 1.0,
+    kappa: 10.0,
     t_max: 1000,
-    seed: 42,
+    seed: 41,
   });
   const [reducedOptions, setReducedOptions] = useState<ReducedOptions>({ mode: "dumbbell", autoTime: true });
   const [data, setData] = useState<SimulateResponse | null>(null);
