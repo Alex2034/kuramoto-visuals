@@ -393,7 +393,8 @@ the boundary as the cluster collapses. Moreover
 \subsection{Three frames}\label{sec:frames}
 
 The same state can be drawn in three ways. The user interface shows the first
-two; the third is the frame of the thesis.
+two, and the variant of the second from \cref{sec:global}; the third is the
+frame of the thesis.
 \begin{description}[leftmargin=1.5em]
 \item[Physical frame.] The oscillators $z_j$ themselves, and the center $P$
       inside the disk.
@@ -426,6 +427,29 @@ F(P)=-f(w,\psi).
 In the physical frame the part of $F$ coming from the identical nodes has its
 maximum at $P$ by construction, so that picture shows where the center is, not
 a descent. The descent of \eqref{eq:gradient-flow} is seen in the gauge frame.
+
+\subsection{The global center}\label{sec:global}
+
+The centered frame of a cluster is tied to one clique. After that clique has
+collapsed it shows the rest of the system as a single boundary point, so it
+says nothing about the slow stage. A frame for the whole system is obtained
+from the barycenter of \emph{all} nodes,
+\begin{equation}\label{eq:global-center}
+P_{\mathrm{all}}:=\bary(z_1,\dots,z_{2N+l}),\qquad
+\sum_{j=1}^{2N+l}\T_{P_{\mathrm{all}}}(z_j)=0 .
+\end{equation}
+It exists as long as fewer than half of the nodes coincide; a collapsed cluster
+carries the fraction $(N-1)/(2N+l)<\tfrac12$. In the frame $\T_{P_{\mathrm{all}}}$
+the configuration is balanced at every time, so it cannot shrink to a point:
+when in the physical frame all phases have gathered in a short arc, this frame
+shows the shape of that arc magnified. There is no single M\"obius map moving
+all nodes, so nothing is rigid in this frame, in contrast to
+\eqref{eq:centered-frame}.
+
+In double precision $P_{\mathrm{all}}$ is computed from the phases themselves
+and is resolved while $1-|P_{\mathrm{all}}|\gtrsim10^{-12}$, that is while the
+arc is wider than about $10^{-6}$; for $N=l=20$, $\lambda=1$, $\kappa=10$ this
+holds up to $t\approx13\,\tau$.
 
 %======================================================================
 \section{Exponential coordinates}\label{sec:coordinates}
@@ -705,6 +729,7 @@ Formula & Implementation & Test\\
 \eqref{eq:center}, \eqref{eq:centered-frame}, \eqref{eq:gauge-frame}, \eqref{eq:potential-frames}
   & frontend \code{clusterCenter}, \code{toFrame}, \code{potential}
   & \code{test\_barycenter\_gauge\_identities}, \code{test\_frames}\\
+\eqref{eq:global-center} & \code{reduced.global\_frame} & \code{test\_dumbbell\_matches\_full\_system}\\
 \eqref{eq:v-def}, \eqref{eq:s-def} & \code{mobius.w\_from\_v}, \code{v\_from\_w}, \code{s\_of\_rho} & \code{test\_v\_w\_roundtrip}\\
 \eqref{eq:rho-dot}, \eqref{eq:rho-late}, \eqref{eq:deficit-late} & --- & \code{test\_rho\_rate}\\
 \eqref{eq:stable-mobius} & \code{mobius.T\_w\_boundary}, frontend \code{tBoundary} & \code{test\_stable\_T\_w\_matches\_naive}, \code{test\_stable\_T\_w\_matches\_mpmath}\\

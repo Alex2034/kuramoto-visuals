@@ -14,7 +14,7 @@ interface ReducedViewProps {
 
 const VIEWS: { id: DiskView; label: string; hint: string }[] = [
   { id: "physical", label: "Physical", hint: "Oscillators as they are; ◎ is the conformal barycenter P = −ζw of each cluster." },
-  { id: "centered", label: "Centered", hint: "Möbius-recentered at P: the cluster is the fixed constellation β rotated by ζ." },
+  { id: "centered", label: "Centered", hint: "Möbius-recentered at a cluster center (the cluster is the fixed constellation β rotated by ζ) or at the barycenter of all nodes." },
 ];
 
 const LAYERS: { id: keyof DiskLayers; label: string }[] = [
@@ -25,11 +25,11 @@ const LAYERS: { id: keyof DiskLayers; label: string }[] = [
 
 export default function ReducedView({ data, frame }: ReducedViewProps) {
   const [view, setView] = useState<DiskView>("physical");
-  const [selected, setSelected] = useState(0);
+  const [selected, setSelected] = useState<number | "all">(0);
   const [layers, setLayers] = useState<DiskLayers>({ potential: true, full: false, geodesics: true });
 
   const i = Math.min(frame, data.times.length - 1);
-  const k = Math.min(selected, data.disks.length - 1);
+  const k = selected === "all" ? 0 : Math.min(selected, data.disks.length - 1);
   const perDisk = (pick: (d: ReducedResponse["disks"][number]) => number[], symbol: string): Series[] =>
     data.disks.map((d, idx) => ({ name: `${symbol}${idx + 1}`, color: CLUSTER_COLORS[idx], values: pick(d) }));
 
@@ -50,13 +50,18 @@ export default function ReducedView({ data, frame }: ReducedViewProps) {
         </div>
         {data.disks.length > 1 && (
           <label className="flex items-center gap-2 text-gray-600">
-            Cluster
-            <select value={k} onChange={(e) => setSelected(parseInt(e.target.value, 10))} className="rounded border border-gray-300 px-1 py-0.5">
+            Center
+            <select
+              value={selected === "all" ? "all" : k}
+              onChange={(e) => setSelected(e.target.value === "all" ? "all" : parseInt(e.target.value, 10))}
+              className="rounded border border-gray-300 px-1 py-0.5"
+            >
               {data.disks.map((_, idx) => (
                 <option key={idx} value={idx}>
-                  {idx + 1}
+                  cluster {idx + 1}
                 </option>
               ))}
+              <option value="all">all nodes</option>
             </select>
           </label>
         )}
@@ -71,7 +76,7 @@ export default function ReducedView({ data, frame }: ReducedViewProps) {
 
       <div className="flex flex-col gap-4">
         <div className="flex flex-wrap items-start gap-4">
-          <PoincareDisk data={data} frame={i} view={view} selected={k} layers={layers} />
+          <PoincareDisk data={data} frame={i} view={view} selected={selected} layers={layers} />
           <div className="flex flex-col gap-4">
             <ClusterMicroscope disk={data.disks[k]} frame={i} color={CLUSTER_COLORS[k]} index={k} />
             <div className="rounded-lg border border-gray-200 bg-white p-3 text-xs text-gray-600 shadow-sm">

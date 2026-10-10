@@ -119,6 +119,10 @@ def test_dumbbell_matches_full_system(N, l, lam, kappa, seed):
     assert max(res["residual"]) < 1e-7
     assert res["tau_fit"] == pytest.approx(res["tau"], rel=0.01)
     assert np.all(np.diff(res["energy"]) <= 1e-9)
+    # eq:global-center: every frame is resolved on the default run and is balanced
+    assert all(a is not None for a in res["global_angles"])
+    balanced = np.exp(1j * np.array(res["global_angles"])).mean(axis=1)
+    assert np.abs(balanced).max() < 1e-9
     for disk in res["disks"]:
         deficit, r_abs = np.array(disk["r_deficit"]), np.array(disk["r_abs"])
         assert np.all(deficit > 0)

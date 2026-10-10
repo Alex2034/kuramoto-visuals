@@ -68,4 +68,8 @@ export interface ReducedResponse {
   residual: number[];
   energy: number[];
   gap: number[];
+  /** Conformal barycenter of all nodes per frame; null where it is not resolved. Empty in complete mode. */
+  global_center: ([number, number] | null)[];
+  /** Phases of all nodes in the frame centered at global_center, in full-system node order. */
+  global_angles: (number[] | null)[];
 }

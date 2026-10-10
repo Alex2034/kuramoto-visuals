@@ -142,6 +142,25 @@ def order_deficit(rho, phi, alpha, theta_node, beta, N) -> float:
     return float(one_minus_r2 / (1 + np.sqrt(max(1 - one_minus_r2, 0.0))))
 
 
+# below this distance from the boundary the global barycenter is not resolved in double precision
+GLOBAL_MIN_GAP = 1e-12
+
+
+def global_frame(theta: np.ndarray):
+    """
+    Conformal barycenter of all nodes and their phases in the frame centered at it.
+    Returns (center, angles), or (None, None) when the configuration is too narrow to resolve.
+    """
+    z = np.exp(1j * theta)
+    try:
+        p = barycenter(z)
+    except ValueError:
+        return None, None
+    if 1 - abs(p) < GLOBAL_MIN_GAP:
+        return None, None
+    return [p.real, p.imag], np.angle(T(p, z)).tolist()
+
+
 def wrap(x):
     return (x + np.pi) % (2 * np.pi) - np.pi
 
@@ -249,8 +268,13 @@ def run_reduced(
         "residual": residual.tolist(),
         "energy": [energy(theta_red[:, i], W) for i in range(len(times))],
         "gap": [],
+        "global_center": [],
+        "global_angles": [],
     }
     if n_disks == 2:
+        frames = [global_frame(theta_red[:, i]) for i in range(len(times))]
+        result["global_center"] = [c for c, _ in frames]
+        result["global_angles"] = [a for _, a in frames]
         gap = np.abs(wrap(y[3] - y[DISK + 3]))
         result["gap"] = gap.tolist()
         if tau is not None:

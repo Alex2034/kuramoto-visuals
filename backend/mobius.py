@@ -74,8 +74,9 @@ def barycenter(z, tol=1e-15, max_iter=200):
         if abs(m) < tol:
             return p
         B = (y * y).mean()
-        d = (m + B * np.conj(m)) / (1 - abs(B) ** 2)
-        if not np.isfinite(d) or abs(d) >= 1:
+        denom = 1 - abs(B) ** 2
+        d = (m + B * np.conj(m)) / denom if denom > 0 else m
+        if abs(d) >= 1:
             d = m
         p = (d + p) / (1 + np.conj(p) * d)
     if abs(T(p, z).mean()) < 1e-10:

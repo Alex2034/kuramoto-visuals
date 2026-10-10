@@ -16,6 +16,7 @@ import {
 
 export const CLUSTER_COLORS = ["#2a78d6", "#eb6834"];
 export const CHAIN_COLOR = "#1baf7a";
+const ALL_COLOR = "#52514e"; // neutral ink for the barycenter of all nodes
 
 const SIZE = 520;
 const CENTER = SIZE / 2;
@@ -39,8 +40,8 @@ interface PoincareDiskProps {
   data: ReducedResponse;
   frame: number;
   view: DiskView;
-  /** Disk whose frame is used by the centered view, and whose potential is drawn. */
-  selected: number;
+  /** Whose center the centered view uses and whose potential is drawn: one cluster, or all nodes. */
+  selected: number | "all";
   layers: DiskLayers;
 }
 
@@ -74,49 +75,63 @@ const polyline = (pts: Vec[]) =>
 export default function PoincareDisk({ data, frame, view, selected, layers }: PoincareDiskProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const i = Math.min(frame, data.times.length - 1);
-  const k = Math.min(selected, data.disks.length - 1);
+  const all = selected === "all" && data.disks.length === 2;
+  const k = selected === "all" ? 0 : Math.min(selected, data.disks.length - 1);
   const sel = data.disks[k];
 
   const scene = useMemo(() => {
     const dots: Dot[] = [];
-    // boundary points of the selected clique in the current frame: they define f
+    // boundary points that define the drawn potential f, and its normalization
     const own: number[] = [];
+    const N = data.N;
+    const globalAngles = all ? (data.global_angles[i] ?? null) : null;
+    const globalCenter = data.global_center[i] ?? null;
+    const centeredAll = all && view === "centered";
+    const unresolved = centeredAll && globalAngles === null;
 
-    data.disks.forEach((d, idx) => {
-      const isSel = idx === k;
-      let consts: number[];
-      let node: number;
-      if (view === "physical") {
-        consts = clusterAngles(d, i);
-        node = d.theta_node[i];
-      } else if (isSel) {
-        // T_P(z_j) = zeta beta_j exactly
-        consts = d.beta.map((b) => b + d.alpha[i]);
-        node = toFrame(d, i, view, d.theta_node[i]);
-      } else {
-        consts = clusterAngles(d, i).map((t) => toFrame(sel, i, view, t));
-        node = toFrame(sel, i, view, d.theta_node[i]);
-      }
-      consts.forEach((angle, j) =>
-        dots.push({ id: `c${idx}-${j}`, angle, color: CLUSTER_COLORS[idx], label: `Cluster ${idx + 1}, node ${j + 1}` }),
-      );
-      dots.push({
-        id: `n${idx}`,
-        angle: node,
-        color: CLUSTER_COLORS[idx],
-        label: `Cluster ${idx + 1}, node attached to the chain`,
-        node: true,
+    // position of a node in the current frame; idx is its index in full-system order
+    const place = (theta: number, idx: number) => {
+      if (view === "physical") return theta;
+      if (centeredAll) return globalAngles ? globalAngles[idx] : 0;
+      return toFrame(sel, i, view, theta);
+    };
+    // full-system order: clique 1 identical nodes, its attached node, chain, attached node of clique 2, its identical nodes
+    const offsets = [
+      { consts: 0, node: N - 1 },
+      { consts: N + data.l + 1, node: N + data.l },
+    ];
+
+    if (!unresolved) {
+      data.disks.forEach((d, idx) => {
+        const exact = view === "centered" && !all && idx === k;
+        const physical = clusterAngles(d, i);
+        // in the frame of its own cluster, T_P(z_j) = zeta beta_j exactly
+        const consts = exact
+          ? d.beta.map((b) => b + d.alpha[i])
+          : physical.map((t, j) => place(t, offsets[idx].consts + j));
+        const node = place(d.theta_node[i], offsets[idx].node);
+        consts.forEach((angle, j) =>
+          dots.push({ id: `c${idx}-${j}`, angle, color: CLUSTER_COLORS[idx], label: `Cluster ${idx + 1}, node ${j + 1}` }),
+        );
+        dots.push({
+          id: `n${idx}`,
+          angle: node,
+          color: CLUSTER_COLORS[idx],
+          label: `Cluster ${idx + 1}, node attached to the chain`,
+          node: true,
+        });
+        if (all || idx === k) own.push(...consts, node);
       });
-      if (isSel) own.push(...consts, node);
-    });
+    }
 
-    const chain = (data.chain[i] ?? []).map((t) => toFrame(sel, i, view, t));
+    const chain = unresolved ? [] : (data.chain[i] ?? []).map((t, j) => place(t, N + j));
     chain.forEach((angle, j) => dots.push({ id: `ch${j}`, angle, color: CHAIN_COLOR, label: `Chain node ${j + 1}` }));
+    if (all) own.push(...chain);
 
     // chain edges as geodesics, including the two attached clique nodes
     let edges = "";
-    if (layers.geodesics && data.disks.length === 2) {
-      const ends = data.disks.map((d) => toFrame(sel, i, view, d.theta_node[i]));
+    if (layers.geodesics && data.disks.length === 2 && !unresolved) {
+      const ends = data.disks.map((d, idx) => place(d.theta_node[i], offsets[idx].node));
       const path = [ends[0], ...chain, ends[1]];
       for (let j = 0; j + 1 < path.length; j++) edges += geodesicPath(path[j], path[j + 1], toPx, SCALE);
     }
@@ -124,6 +139,7 @@ export default function PoincareDisk({ data, frame, view, selected, layers }: Po
     // interior markers and trails
     const markers: Marker[] = [];
     const trails: Trail[] = [];
+    const pAll: Vec | null = globalCenter ? { x: globalCenter[0], y: globalCenter[1] } : null;
     if (view === "physical") {
       data.disks.forEach((d, idx) => {
         const pts: Vec[] = [];
@@ -131,6 +147,15 @@ export default function PoincareDisk({ data, frame, view, selected, layers }: Po
         trails.push({ id: `t${idx}`, points: polyline(pts), color: CLUSTER_COLORS[idx] });
         markers.push({ id: `m${idx}`, at: pts[i], color: CLUSTER_COLORS[idx], label: `P${idx + 1}: center of cluster ${idx + 1}` });
       });
+      if (pAll) markers.push({ id: "m-all", at: pAll, color: ALL_COLOR, label: "P_all: barycenter of all nodes" });
+    } else if (centeredAll) {
+      if (pAll) {
+        markers.push({ id: "m-all", at: { x: 0, y: 0 }, color: ALL_COLOR, label: "P_all (view is centered here)" });
+        data.disks.forEach((d, idx) => {
+          const at = mobiusPoint(pAll, clusterCenter(d, i));
+          markers.push({ id: `m${idx}`, at, color: CLUSTER_COLORS[idx], label: `P${idx + 1}: center of cluster ${idx + 1}` });
+        });
+      }
     } else {
       markers.push({ id: "m-own", at: { x: 0, y: 0 }, color: CLUSTER_COLORS[k], label: `P${k + 1} (view is centered here)` });
       data.disks.forEach((d, idx) => {
@@ -141,9 +166,10 @@ export default function PoincareDisk({ data, frame, view, selected, layers }: Po
     }
 
     const full = layers.full && view === "physical" ? (data.full[i] ?? []) : [];
+    const norm = all ? 2 * N + data.l : N;
 
-    return { dots, own, edges, markers, trails, full };
-  }, [data, i, view, k, sel, layers.geodesics, layers.full]);
+    return { dots, own, norm, edges, markers, trails, full, unresolved };
+  }, [data, i, view, k, sel, all, layers.geodesics, layers.full]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -159,7 +185,7 @@ export default function PoincareDisk({ data, frame, view, selected, layers }: Po
           const x = ((gx + 0.5) / GRID) * 2 - 1;
           const y = 1 - ((gy + 0.5) / GRID) * 2;
           if (x * x + y * y >= 1) continue;
-          const f = potential(x, y, cos, sin, data.N);
+          const f = potential(x, y, cos, sin, scene.norm);
           const u = Math.min(1, Math.max(0, (f - F_MIN) / (F_MAX - F_MIN)));
           const o = (gy * GRID + gx) * 4;
           for (let c = 0; c < 3; c++) img.data[o + c] = RAMP_LO[c] + (RAMP_HI[c] - RAMP_LO[c]) * u;
@@ -168,7 +194,7 @@ export default function PoincareDisk({ data, frame, view, selected, layers }: Po
       }
     }
     ctx.putImageData(img, 0, 0);
-  }, [scene.own, layers.potential, data.N]);
+  }, [scene.own, scene.norm, layers.potential]);
 
   const c = toPx({ x: 0, y: 0 });
 
@@ -204,6 +230,11 @@ export default function PoincareDisk({ data, frame, view, selected, layers }: Po
               </circle>
             );
           })}
+          {scene.unresolved && (
+            <text x={c.x} y={c.y} textAnchor="middle" fontSize={14} fill="#52514e">
+              All phases agree to within ~1e-6: this frame is no longer resolved
+            </text>
+          )}
           {scene.markers.map((m) => {
             const p = toPx(m.at);
             return (
@@ -232,11 +263,12 @@ export default function PoincareDisk({ data, frame, view, selected, layers }: Po
         </span>
         <span>
           ◎ {view === "physical" ? "cluster center P with trail" : "cluster centers"}
+          {data.global_center.length > 0 ? "; gray: barycenter of all nodes" : ""}
         </span>
         {scene.full.length > 0 && <span>○ full system</span>}
         {layers.potential && (
           <span className="flex items-center gap-1">
-            f, cluster {k + 1}: {F_MIN}
+            f, {all ? "all nodes" : `cluster ${k + 1}`}: {F_MIN}
             <span
               className="inline-block h-2 w-16"
               style={{ background: `linear-gradient(to right, rgb(${RAMP_LO.join(",")}), rgb(${RAMP_HI.join(",")}))` }}
