@@ -51,7 +51,7 @@ export default function ClusterMicroscope({ disk, frame, color, index }: Cluster
           +∞
         </text>
         {mu.map((m, j) => (
-          <circle key={j} cx={xOf(m)} cy={44} r={5} fill={color} stroke="white" strokeWidth={2} opacity={0.9}>
+          <circle key={j} cx={xOf(m)} cy={44} r={5} fill={color} fillOpacity={0.75}>
             <title>{`node ${j + 1}: μ = ${m.toPrecision(4)}`}</title>
           </circle>
         ))}

@@ -15,7 +15,22 @@ import {
 } from "@/lib/mobius";
 
 export const CLUSTER_COLORS = ["#2a78d6", "#eb6834"];
-export const CHAIN_COLOR = "#1baf7a";
+// neutral ink for the chain as a whole (chart series, edges); its nodes are colored by position
+export const CHAIN_COLOR = "#6f6e69";
+const CHAIN_MID = [163, 162, 155];
+const DOT_OPACITY = 0.75;
+
+const rgbOf = (hex: string) => [1, 3, 5].map((o) => parseInt(hex.slice(o, o + 2), 16));
+
+/**
+ * Chain node j of l, colored by its position on the graph: cluster 1's color at
+ * that end, a neutral gray in the middle, cluster 2's color at the other end.
+ */
+export function chainColor(j: number, l: number): string {
+  const t = (j + 1) / (l + 1);
+  const [from, to, u] = t < 0.5 ? [rgbOf(CLUSTER_COLORS[0]), CHAIN_MID, t * 2] : [CHAIN_MID, rgbOf(CLUSTER_COLORS[1]), t * 2 - 1];
+  return `rgb(${from.map((c, k) => Math.round(c + (to[k] - c) * u)).join(",")})`;
+}
 const ALL_COLOR = "#52514e"; // neutral ink for the barycenter of all nodes
 
 const SIZE = 520;
@@ -24,9 +39,9 @@ const SCALE = 230; // pixels per unit (radius 1 -> 230px)
 const GRID = 110; // potential heatmap resolution
 const F_MIN = -2.5;
 const F_MAX = 1;
-// neutral sequential ramp, light (low f) -> dark (high f); hue is left to the clusters
-const RAMP_LO = [247, 247, 245];
-const RAMP_HI = [137, 135, 129];
+// very light neutral ramp, white (low f) -> light gray (high f): a backdrop, hue is left to the nodes
+const RAMP_LO = [255, 255, 255];
+const RAMP_HI = [208, 207, 201];
 
 const toPx = (v: Vec): Vec => ({ x: CENTER + v.x * SCALE, y: CENTER - v.y * SCALE });
 
@@ -125,7 +140,7 @@ export default function PoincareDisk({ data, frame, view, selected, layers }: Po
     }
 
     const chain = unresolved ? [] : (data.chain[i] ?? []).map((t, j) => place(t, N + j));
-    chain.forEach((angle, j) => dots.push({ id: `ch${j}`, angle, color: CHAIN_COLOR, label: `Chain node ${j + 1}` }));
+    chain.forEach((angle, j) => dots.push({ id: `ch${j}`, angle, color: chainColor(j, chain.length), label: `Chain node ${j + 1}` }));
     if (all) own.push(...chain);
 
     // chain edges as geodesics, including the two attached clique nodes
@@ -210,7 +225,7 @@ export default function PoincareDisk({ data, frame, view, selected, layers }: Po
         />
         <svg width={SIZE} height={SIZE} className="absolute left-0 top-0 overflow-visible">
           <circle cx={c.x} cy={c.y} r={SCALE} fill="none" stroke="#c3c2b7" strokeWidth={1.5} />
-          {scene.edges && <path d={scene.edges} fill="none" stroke={CHAIN_COLOR} strokeWidth={1} opacity={0.55} />}
+          {scene.edges && <path d={scene.edges} fill="none" stroke={CHAIN_COLOR} strokeWidth={1} opacity={0.4} />}
           {scene.trails.map((t) => (
             <polyline key={t.id} points={t.points} fill="none" stroke={t.color} strokeWidth={2} strokeLinejoin="round" />
           ))}
@@ -221,11 +236,11 @@ export default function PoincareDisk({ data, frame, view, selected, layers }: Po
           {scene.dots.map((dot) => {
             const p = toPx(onCircle(dot.angle));
             return dot.node ? (
-              <rect key={dot.id} x={p.x - 5} y={p.y - 5} width={10} height={10} fill={dot.color} stroke="white" strokeWidth={2}>
+              <rect key={dot.id} x={p.x - 5} y={p.y - 5} width={10} height={10} fill={dot.color} fillOpacity={DOT_OPACITY}>
                 <title>{dot.label}</title>
               </rect>
             ) : (
-              <circle key={dot.id} cx={p.x} cy={p.y} r={5} fill={dot.color} stroke="white" strokeWidth={2}>
+              <circle key={dot.id} cx={p.x} cy={p.y} r={5} fill={dot.color} fillOpacity={DOT_OPACITY}>
                 <title>{dot.label}</title>
               </circle>
             );
@@ -238,7 +253,7 @@ export default function PoincareDisk({ data, frame, view, selected, layers }: Po
           {scene.markers.map((m) => {
             const p = toPx(m.at);
             return (
-              <circle key={m.id} cx={p.x} cy={p.y} r={7} fill="white" stroke={m.color} strokeWidth={3}>
+              <circle key={m.id} cx={p.x} cy={p.y} r={7} fill="none" stroke={m.color} strokeWidth={2.5} pointerEvents="stroke">
                 <title>{m.label}</title>
               </circle>
             );
@@ -254,8 +269,11 @@ export default function PoincareDisk({ data, frame, view, selected, layers }: Po
         ))}
         {data.chain.length > 0 && (
           <span>
-            <span className="mr-1 inline-block h-2 w-2 rounded-full" style={{ background: CHAIN_COLOR }} />
-            Chain
+            <span
+              className="mr-1 inline-block h-2 w-8 rounded-full align-middle"
+              style={{ background: `linear-gradient(to right, ${CLUSTER_COLORS[0]}, rgb(${CHAIN_MID.join(",")}), ${CLUSTER_COLORS[1]})` }}
+            />
+            Chain, colored by position
           </span>
         )}
         <span>
