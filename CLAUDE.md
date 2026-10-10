@@ -17,6 +17,11 @@ size `N` joined by a chain of length `l`). Inherits `~/projects/CLAUDE.md`.
   test (`backend/tests/test_formulas.py` checks the statements the code does not
   use). When the model changes: document first, then tests, then code; rebuild
   with `cd source && latexmk -pdf main.tex` and commit the PDF.
+- Formulas on the site come from the notes: `python3 scripts/extract_formulas.py`
+  writes `frontend/src/lib/formulas.json` from the labelled equations of
+  `main.tex`; `<Formula id="eq:...">` renders them with KaTeX. Rerun it after
+  editing `main.tex`, then `cd frontend && npm run check:formulas`. Every symbol
+  shown in the interface must be defined next to where it appears.
 - `frontend/` — Next.js 14 App Router + TypeScript + Tailwind. API types live in
   `src/types/api.ts` and must match the backend response shape.
 - `streamlit_example.py` — original monolithic reference; not the app.
