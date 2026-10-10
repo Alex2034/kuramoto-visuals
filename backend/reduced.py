@@ -130,6 +130,18 @@ def cross_ratios(z: np.ndarray) -> np.ndarray:
     return (a - c) / (a - b) * (d - b) / (d - c)
 
 
+def order_deficit(rho, phi, alpha, theta_node, beta, N) -> float:
+    """
+    1 - |r| for one clique without cancellation: 1 - |r|^2 = (4/N^2) sum_{i<j} sin^2((theta_i - theta_j)/2),
+    with the phase differences of the collapsed nodes taken from the microscope offsets s * mu_j.
+    """
+    off = s_of_rho(rho) * microscope(rho, phi, beta)  # theta_j - Theta, Theta = alpha + phi + pi
+    pairs = np.sin((off[:, None] - off[None, :]) / 2) ** 2
+    node = np.sin((theta_node - (alpha + phi + np.pi) - off) / 2) ** 2
+    one_minus_r2 = 4 / N**2 * (pairs.sum() / 2 + node.sum())
+    return float(one_minus_r2 / (1 + np.sqrt(max(1 - one_minus_r2, 0.0))))
+
+
 def wrap(x):
     return (x + np.pi) % (2 * np.pi) - np.pi
 
@@ -202,6 +214,7 @@ def run_reduced(
         r_abs = np.abs(np.exp(1j * theta_red[nodes]).mean(axis=0))
         f = [potential_gauge(rho[i], phi[i], beta, d[3, i] - d[2, i], N) for i in range(len(times))]
         mu = np.array([microscope(rho[i], phi[i], beta) for i in range(len(times))])
+        deficit = [order_deficit(rho[i], phi[i], d[2, i], d[3, i], beta, N) for i in range(len(times))]
         # cross-ratios of the full system are only resolvable while the cluster is
         # wider than machine precision
         early = times <= (20 / lambda_val if lambda_val > 0 else times[-1])
@@ -214,6 +227,7 @@ def run_reduced(
             "alpha": d[2].tolist(),
             "theta_node": d[3].tolist(),
             "r_abs": r_abs.tolist(),
+            "r_deficit": deficit,
             "f": f,
             "mu": mu.tolist(),
             "cross_ratio_drift": drift.tolist(),
@@ -223,6 +237,8 @@ def run_reduced(
         "mode": mode,
         "N": N,
         "l": l if mode == "dumbbell" else 0,
+        "lambda_val": lambda_val,
+        "kappa": kappa if mode == "dumbbell" else 0.0,
         "times": times.tolist(),
         "disks": disks,
         "chain": y[2 * DISK:].T.tolist() if n_disks == 2 else [],

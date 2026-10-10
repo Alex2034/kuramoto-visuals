@@ -45,6 +45,8 @@ export interface DiskSeries {
   alpha: number[];
   theta_node: number[];
   r_abs: number[];
+  /** 1 - |r|, computed without cancellation. */
+  r_deficit: number[];
   f: number[];
   mu: number[][];
   cross_ratio_drift: number[];
@@ -54,6 +56,8 @@ export interface ReducedResponse {
   mode: ReducedMode;
   N: number;
   l: number;
+  lambda_val: number;
+  kappa: number;
   times: number[];
   disks: DiskSeries[];
   chain: number[][];

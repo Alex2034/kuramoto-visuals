@@ -128,11 +128,6 @@ export default function Home() {
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col gap-4">
-          {tab === "disk" && reduced && !error ? (
-            <ReducedView data={reduced} frame={frameIndex} />
-          ) : (
-            <KuramotoVisualization frame={tab === "circle" ? frame : null} error={error} />
-          )}
           <AnimationControls
             currentFrame={frameIndex}
             totalFrames={totalFrames}
@@ -141,6 +136,11 @@ export default function Home() {
             onPlayPause={() => setIsPlaying((p) => !p)}
             label={timeLabel}
           />
+          {tab === "disk" && reduced && !error ? (
+            <ReducedView data={reduced} frame={frameIndex} />
+          ) : (
+            <KuramotoVisualization frame={tab === "circle" ? frame : null} error={error} />
+          )}
         </div>
       </div>
     </main>

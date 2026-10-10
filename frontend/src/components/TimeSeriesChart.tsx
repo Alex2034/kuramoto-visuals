@@ -21,7 +21,7 @@ interface TimeSeriesChartProps {
 const W = 360;
 const H = 170;
 const M = { left: 46, right: 10, top: 8, bottom: 22 };
-const LOG_FLOOR = 1e-17;
+const LOG_FLOOR = 1e-300;
 
 function fmt(v: number): string {
   if (v === 0) return "0";

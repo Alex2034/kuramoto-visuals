@@ -119,6 +119,10 @@ def test_dumbbell_matches_full_system(N, l, lam, kappa, seed):
     assert max(res["residual"]) < 1e-7
     assert res["tau_fit"] == pytest.approx(res["tau"], rel=0.01)
     assert np.all(np.diff(res["energy"]) <= 1e-9)
+    for disk in res["disks"]:
+        deficit, r_abs = np.array(disk["r_deficit"]), np.array(disk["r_abs"])
+        assert np.all(deficit > 0)
+        assert np.allclose(deficit, 1 - r_abs, atol=1e-12)
 
 
 def test_long_run_stays_finite():
@@ -126,7 +130,7 @@ def test_long_run_stays_finite():
     rho = np.array(res["disks"][0]["rho"])
     assert rho[-1] > 1400
     for disk in res["disks"]:
-        for key in ("rho", "phi", "alpha", "theta_node", "r_abs", "f", "mu"):
+        for key in ("rho", "phi", "alpha", "theta_node", "r_abs", "r_deficit", "f", "mu"):
             assert np.all(np.isfinite(disk[key])), key
     assert np.all(np.isfinite(res["residual"]))
     assert max(res["residual"]) < 1e-7

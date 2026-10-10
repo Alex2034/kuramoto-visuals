@@ -34,25 +34,6 @@ export default function ReducedView({ data, frame }: ReducedViewProps) {
   const perDisk = (pick: (d: ReducedResponse["disks"][number]) => number[], symbol: string): Series[] =>
     data.disks.map((d, idx) => ({ name: `${symbol}${idx + 1}`, color: CLUSTER_COLORS[idx], values: pick(d) }));
 
-  // reference decay exp(-lambda_2 t), anchored on the gap at t = 2 tau
-  let gapSeries: Series[] = [];
-  if (data.gap.length > 0) {
-    gapSeries = [{ name: "|θ_N − θ_N+l+1|", color: "#2a78d6", values: data.gap }];
-    if (data.lambda2 && data.tau) {
-      let a = 0;
-      for (let j = 1; j < data.times.length; j++) {
-        if (Math.abs(data.times[j] - 2 * data.tau) < Math.abs(data.times[a] - 2 * data.tau)) a = j;
-      }
-      const lambda2 = data.lambda2;
-      gapSeries.push({
-        name: "slope −λ₂",
-        color: "#898781",
-        dashed: true,
-        values: data.times.map((t) => data.gap[a] * Math.exp(-lambda2 * (t - data.times[a]))),
-      });
-    }
-  }
-
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-lg border border-gray-200 bg-white p-3 text-sm shadow-sm">
@@ -108,18 +89,17 @@ export default function ReducedView({ data, frame }: ReducedViewProps) {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-          <TimeSeriesChart title="Hyperbolic radius ρ = 2 artanh|w|" times={data.times} series={perDisk((d) => d.rho, "ρ")} cursor={i} />
-          <TimeSeriesChart title="Cluster order parameter |r|" times={data.times} series={perDisk((d) => d.r_abs, "|r|")} cursor={i} />
-          <TimeSeriesChart title="Potential f(w, ψ)" times={data.times} series={perDisk((d) => d.f, "f")} cursor={i} />
-          <TimeSeriesChart title="Energy E = −Σ a_ij cos(θ_i − θ_j)" times={data.times} series={[{ name: "E", color: "#2a78d6", values: data.energy }]} cursor={i} />
-          {gapSeries.length > 0 && (
-            <TimeSeriesChart title="Gap between the attached nodes (log)" times={data.times} series={gapSeries} cursor={i} logY />
-          )}
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <TimeSeriesChart
-            title="Reduction residual vs full system (log)"
+            title="Hyperbolic radius minus its drift, ρ − λt"
             times={data.times}
-            series={[{ name: "max |Δz|", color: "#2a78d6", values: data.residual }]}
+            series={perDisk((d) => d.rho.map((rho, j) => rho - data.lambda_val * data.times[j]), "ρ − λt, cluster ")}
+            cursor={i}
+          />
+          <TimeSeriesChart
+            title="Cluster order-parameter deficit, 1 − |r| (log)"
+            times={data.times}
+            series={perDisk((d) => d.r_deficit, "1 − |r|, cluster ")}
             cursor={i}
             logY
           />
