@@ -12,7 +12,7 @@ the cluster and T_P(z_j) = zeta * beta_j.
 import numpy as np
 from scipy.integrate import solve_ivp
 
-from kuramoto import build_dumbbell_adjacency, energy, fiedler, integrate_full
+from kuramoto import build_dumbbell_adjacency, energy, fiedler, integrate_full, kuramoto_ode
 from mobius import T, T_w_boundary, barycenter, microscope, potential_gauge, s_of_rho
 
 RTOL = 1e-11
@@ -298,6 +298,8 @@ def run_reduced(
         "tau_fit": None,
         "residual": residual.tolist(),
         "energy": [energy(theta_red[:, i], W) for i in range(len(times))],
+        # angular velocities of all nodes, in full-system node order
+        "velocity": [kuramoto_ode(times[i], theta_red[:, i], W).tolist() for i in range(len(times))],
         "gap": [],
         "chain_deficit": [],
         "global_center": [],

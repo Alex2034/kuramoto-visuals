@@ -3,9 +3,9 @@
 import { useMemo, useState } from "react";
 import type { ReducedResponse } from "@/types/api";
 import type { DiskView } from "@/lib/mobius";
-import PoincareDisk, { CHAIN_COLOR, CLUSTER_COLORS, type DiskLayers } from "@/components/PoincareDisk";
+import PoincareDisk, { CHAIN_COLOR, CLUSTER_COLORS, chainColor, type DiskLayers } from "@/components/PoincareDisk";
 import ClusterMicroscope from "@/components/ClusterMicroscope";
-import TimeSeriesChart, { type Mark, type Series } from "@/components/TimeSeriesChart";
+import TimeSeriesChart, { type BackgroundLine, type Mark, type Series } from "@/components/TimeSeriesChart";
 
 interface ReducedViewProps {
   data: ReducedResponse;
@@ -48,22 +48,64 @@ function nodeCrossings(data: ReducedResponse): Mark[] {
   return marks;
 }
 
+/**
+ * Angular velocities: one thin line per node, and the mean over each group
+ * (the N nodes of a clique, the l nodes of the chain) as a series.
+ */
+function velocityCurves(data: ReducedResponse): { means: Series[]; nodes: BackgroundLine[] } {
+  const { N, l } = data;
+  const column = (j: number) => data.velocity.map((frame) => frame[j]);
+  const range = (from: number, count: number) => Array.from({ length: count }, (_, j) => from + j);
+  const groups =
+    data.disks.length === 2
+      ? [
+          { name: "cluster 1", color: CLUSTER_COLORS[0], nodes: range(0, N), nodeColor: () => CLUSTER_COLORS[0] },
+          { name: "cluster 2", color: CLUSTER_COLORS[1], nodes: range(N + l, N), nodeColor: () => CLUSTER_COLORS[1] },
+          { name: "chain", color: CHAIN_COLOR, nodes: range(N, l), nodeColor: (j: number) => chainColor(j, l) },
+        ]
+      : [{ name: "cluster 1", color: CLUSTER_COLORS[0], nodes: range(0, N), nodeColor: () => CLUSTER_COLORS[0] }];
+  const means: Series[] = [];
+  const nodes: BackgroundLine[] = [];
+  for (const g of groups) {
+    const columns = g.nodes.map(column);
+    columns.forEach((values, j) => nodes.push({ color: g.nodeColor(j), values }));
+    means.push({
+      name: `mean, ${g.name}`,
+      color: g.color,
+      values: data.times.map((_, f) => columns.reduce((acc, c) => acc + c[f], 0) / columns.length),
+    });
+  }
+  return { means, nodes };
+}
+
 export default function ReducedView({ data, frame }: ReducedViewProps) {
   const [view, setView] = useState<DiskView>("physical");
   const [selected, setSelected] = useState<number | "all">(0);
-  const [microCluster, setMicroCluster] = useState(0);
   const [layers, setLayers] = useState<DiskLayers>({ potential: true, geodesics: true });
 
   const i = Math.min(frame, data.times.length - 1);
   const k = selected === "all" ? 0 : Math.min(selected, data.disks.length - 1);
-  const m = Math.min(microCluster, data.disks.length - 1);
-  const perDisk = (pick: (d: ReducedResponse["disks"][number]) => number[], symbol: string): Series[] =>
-    data.disks.map((d, idx) => ({ name: `${symbol}${idx + 1}`, color: CLUSTER_COLORS[idx], values: pick(d) }));
-
   const deficits = [...data.disks.map((d) => d.r_deficit), ...(data.chain_deficit.length > 0 ? [data.chain_deficit] : [])];
   // the axis ends a decade below the smallest final value, so a zero crossing does not stretch it
   const deficitFloor = Math.min(...deficits.map((v) => v[v.length - 1])) / 10;
   const crossings = useMemo(() => nodeCrossings(data), [data]);
+  const velocity = useMemo(() => velocityCurves(data), [data]);
+  const rhoSeries = useMemo(
+    () =>
+      data.disks.map((d, idx) => ({
+        name: `ρ − λt, cluster ${idx + 1}`,
+        color: CLUSTER_COLORS[idx],
+        values: d.rho.map((rho, j) => rho - data.lambda_val * data.times[j]),
+      })),
+    [data],
+  );
+  const deficitSeries = useMemo(
+    () => [
+      ...data.disks.map((d, idx) => ({ name: `1 − |r|, cluster ${idx + 1}`, color: CLUSTER_COLORS[idx], values: d.r_deficit })),
+      ...(data.chain_deficit.length > 0 ? [{ name: "1 − |r|, chain", color: CHAIN_COLOR, values: data.chain_deficit }] : []),
+    ],
+    [data],
+  );
 
   return (
     <div className="flex flex-col gap-4">
@@ -109,51 +151,44 @@ export default function ReducedView({ data, frame }: ReducedViewProps) {
       <div className="flex flex-col gap-4">
         <div className="flex flex-wrap items-start gap-4">
           <PoincareDisk data={data} frame={i} view={view} selected={selected} layers={layers} />
-          <div className="flex flex-col gap-4">
-            <ClusterMicroscope
-              disk={data.disks[m]}
-              frame={i}
-              color={CLUSTER_COLORS[m]}
-              index={m}
-              count={data.disks.length}
-              onSelect={setMicroCluster}
-            />
-            <div className="rounded-lg border border-gray-200 bg-white p-3 text-xs text-gray-600 shadow-sm">
-              t = {data.times[i].toPrecision(5)}
-              {data.tau !== null && (
-                <>
-                  {" "}
-                  · τ = 1/λ₂ = {data.tau.toPrecision(5)}
-                  {data.tau_fit !== null && <> · fitted τ = {data.tau_fit.toPrecision(5)}</>}
-                </>
-              )}{" "}
-              · max |reduced − full| = {Math.max(...data.residual).toExponential(1)}
-            </div>
+          <div className="rounded-lg border border-gray-200 bg-white p-3 text-xs text-gray-600 shadow-sm">
+            t = {data.times[i].toPrecision(5)}
+            {data.tau !== null && (
+              <>
+                {" "}
+                · τ = 1/λ₂ = {data.tau.toPrecision(5)}
+                {data.tau_fit !== null && <> · fitted τ = {data.tau_fit.toPrecision(5)}</>}
+              </>
+            )}{" "}
+            · max |reduced − full| = {Math.max(...data.residual).toExponential(1)}
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <TimeSeriesChart
-            title="Hyperbolic radius minus its drift, ρ − λt"
-            times={data.times}
-            series={perDisk((d) => d.rho.map((rho, j) => rho - data.lambda_val * data.times[j]), "ρ − λt, cluster ")}
-            cursor={i}
-          />
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <TimeSeriesChart title="Hyperbolic radius minus its drift, ρ − λt" times={data.times} series={rhoSeries} cursor={i} />
           <TimeSeriesChart
             title="Order-parameter deficit, 1 − |r| (log)"
             times={data.times}
-            series={[
-              ...perDisk((d) => d.r_deficit, "1 − |r|, cluster "),
-              ...(data.chain_deficit.length > 0
-                ? [{ name: "1 − |r|, chain", color: CHAIN_COLOR, values: data.chain_deficit }]
-                : []),
-            ]}
+            series={deficitSeries}
             cursor={i}
             logY
             yMin={deficitFloor}
             marks={crossings}
             marksNote="the attached node passes through its cluster (δ = 0): 1 − |r| of that cluster touches zero"
           />
+          <TimeSeriesChart
+            title="Angular velocities: every node (thin) and group means"
+            times={data.times}
+            series={velocity.means}
+            background={velocity.nodes}
+            cursor={i}
+          />
+        </div>
+
+        <div className="flex flex-wrap gap-4">
+          {data.disks.map((d, idx) => (
+            <ClusterMicroscope key={idx} disk={d} frame={i} color={CLUSTER_COLORS[idx]} index={idx} />
+          ))}
         </div>
       </div>
     </div>

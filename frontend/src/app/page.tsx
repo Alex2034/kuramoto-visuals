@@ -28,7 +28,7 @@ export default function Home() {
     N: 20,
     l: 20,
     lambda_val: 1.0,
-    kappa: 10.0,
+    kappa: 1.0,
     t_max: 1000,
     seed: 41,
   });

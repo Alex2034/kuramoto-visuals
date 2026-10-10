@@ -1,12 +1,18 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useId, useMemo, useState } from "react";
 
 export interface Series {
   name: string;
   color: string;
   values: number[];
   dashed?: boolean;
+}
+
+/** A thin, translucent curve drawn behind the series; it has no legend entry and does not set the y range. */
+export interface BackgroundLine {
+  color: string;
+  values: number[];
 }
 
 /** An instant worth pointing at, drawn as a small triangle on the time axis. */
@@ -25,6 +31,7 @@ interface TimeSeriesChartProps {
   logY?: boolean;
   /** Lower end of the y axis; curves that go below it leave the plot through the bottom. */
   yMin?: number;
+  background?: BackgroundLine[];
   marks?: Mark[];
   /** One-line explanation of the marks, shown under the plot when there are any. */
   marksNote?: string;
@@ -34,6 +41,8 @@ const W = 360;
 const H = 170;
 const M = { left: 46, right: 10, top: 8, bottom: 22 };
 const LOG_FLOOR = 1e-300;
+const NO_BACKGROUND: BackgroundLine[] = [];
+const NO_MARKS: Mark[] = [];
 
 function fmt(v: number): string {
   if (v === 0) return "0";
@@ -48,34 +57,55 @@ export default function TimeSeriesChart({
   cursor,
   logY = false,
   yMin,
-  marks = [],
+  background = NO_BACKGROUND,
+  marks = NO_MARKS,
   marksNote,
 }: TimeSeriesChartProps) {
   const [hover, setHover] = useState<number | null>(null);
   const clipId = useId();
-  const tr = (v: number) => (logY ? Math.log10(Math.max(v, LOG_FLOOR)) : v);
 
-  let lo = Infinity;
-  let hi = -Infinity;
-  for (const s of series) {
-    for (const v of s.values) {
-      if (!Number.isFinite(v)) continue;
-      const u = tr(v);
-      if (u < lo) lo = u;
-      if (u > hi) hi = u;
+  // everything that does not depend on the cursor is computed once per data set
+  const plot = useMemo(() => {
+    const tr = (v: number) => (logY ? Math.log10(Math.max(v, LOG_FLOOR)) : v);
+    let lo = Infinity;
+    let hi = -Infinity;
+    for (const s of series) {
+      for (const v of s.values) {
+        if (!Number.isFinite(v)) continue;
+        const u = tr(v);
+        if (u < lo) lo = u;
+        if (u > hi) hi = u;
+      }
     }
-  }
-  if (yMin !== undefined && Number.isFinite(lo)) lo = Math.max(lo, tr(yMin));
-  if (!Number.isFinite(lo)) [lo, hi] = [0, 1];
-  if (hi - lo < 1e-12) [lo, hi] = [lo - 0.5, hi + 0.5];
+    if (yMin !== undefined && Number.isFinite(lo)) lo = Math.max(lo, tr(yMin));
+    if (!Number.isFinite(lo)) [lo, hi] = [0, 1];
+    if (hi - lo < 1e-12) [lo, hi] = [lo - 0.5, hi + 0.5];
 
-  const t0 = times[0];
-  const t1 = times[times.length - 1];
-  const plotW = W - M.left - M.right;
-  const plotH = H - M.top - M.bottom;
-  const x = (t: number) => M.left + ((t - t0) / (t1 - t0 || 1)) * plotW;
-  const yOf = (u: number) => H - M.bottom - ((u - lo) / (hi - lo)) * plotH;
-  const y = (v: number) => yOf(tr(v));
+    const t0 = times[0];
+    const t1 = times[times.length - 1];
+    const plotW = W - M.left - M.right;
+    const plotH = H - M.top - M.bottom;
+    const x = (t: number) => M.left + ((t - t0) / (t1 - t0 || 1)) * plotW;
+    const yOf = (u: number) => H - M.bottom - ((u - lo) / (hi - lo)) * plotH;
+    // far-off values are clipped by the plot area; keep the coordinates finite and short
+    const y = (v: number) => Math.max(-H, Math.min(2 * H, yOf(tr(v))));
+    const path = (values: number[]) => values.map((v, i) => `${x(times[i]).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
+    return {
+      lo,
+      hi,
+      t0,
+      t1,
+      plotW,
+      plotH,
+      x,
+      y,
+      yOf,
+      lines: series.map((s) => path(s.values)),
+      backgroundLines: background.map((b) => path(b.values)),
+    };
+  }, [times, series, background, logY, yMin]);
+
+  const { lo, hi, t0, t1, plotW, plotH, x, y, yOf } = plot;
   const tickLabel = (u: number) => (logY ? `1e${u.toFixed(0)}` : fmt(u));
   const ticks = [lo, (lo + hi) / 2, hi];
 
@@ -118,24 +148,26 @@ export default function TimeSeriesChart({
         <clipPath id={clipId}>
           <rect x={M.left} y={M.top} width={plotW} height={plotH} />
         </clipPath>
-        {series.map((s) => (
-          <polyline
-            key={s.name}
-            clipPath={`url(#${clipId})`}
-            fill="none"
-            stroke={s.color}
-            strokeWidth={2}
-            strokeDasharray={s.dashed ? "4 3" : undefined}
-            strokeLinejoin="round"
-            points={s.values.map((v, i) => `${x(times[i]).toFixed(1)},${y(v).toFixed(1)}`).join(" ")}
-          />
-        ))}
+        <g clipPath={`url(#${clipId})`} fill="none" strokeLinejoin="round">
+          {background.map((b, i) => (
+            <polyline key={i} stroke={b.color} strokeWidth={0.75} opacity={0.3} points={plot.backgroundLines[i]} />
+          ))}
+          {series.map((s, i) => (
+            <polyline
+              key={s.name}
+              stroke={s.color}
+              strokeWidth={2}
+              strokeDasharray={s.dashed ? "4 3" : undefined}
+              points={plot.lines[i]}
+            />
+          ))}
+        </g>
         <line x1={x(times[shown])} x2={x(times[shown])} y1={M.top} y2={H - M.bottom} stroke="#52514e" strokeWidth={1} />
         {series.map((s) => (
           <circle
             key={s.name}
             cx={x(times[shown])}
-            cy={Math.min(y(s.values[shown]), H - M.bottom)}
+            cy={Math.max(M.top, Math.min(y(s.values[shown]), H - M.bottom))}
             r={4}
             fill={s.color}
             stroke="white"

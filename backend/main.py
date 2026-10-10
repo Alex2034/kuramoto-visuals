@@ -25,7 +25,7 @@ class SimulateRequest(BaseModel):
     N: int = Field(ge=5, le=50, default=20, description="Size of complete graphs")
     l: int = Field(ge=5, le=50, default=20, description="Chain length")
     lambda_val: float = Field(ge=0.0, le=10.0, default=1.0, description="Coupling in complete graphs")
-    kappa: float = Field(ge=0.0, le=10.0, default=10.0, description="Coupling in chain")
+    kappa: float = Field(ge=0.0, le=10.0, default=1.0, description="Coupling in chain")
     t_max: float = Field(ge=10, le=2000, default=1000, description="Simulation time")
     seed: int = Field(ge=0, default=41, description="Seed for the uniform initial phases")
 
@@ -52,7 +52,7 @@ class ReducedRequest(BaseModel):
     N: int = Field(ge=5, le=50, default=20, description="Size of complete graphs")
     l: int = Field(ge=5, le=50, default=20, description="Chain length (dumbbell only)")
     lambda_val: float = Field(gt=0.0, le=10.0, default=1.0, description="Coupling in complete graphs")
-    kappa: float = Field(ge=0.0, le=10.0, default=10.0, description="Coupling in chain (dumbbell only)")
+    kappa: float = Field(ge=0.0, le=10.0, default=1.0, description="Coupling in chain (dumbbell only)")
     t_max: Optional[float] = Field(gt=0, le=20000, default=None, description="Simulation time; default 3/lambda_2")
     n_frames: int = Field(ge=20, le=2000, default=300, description="Number of output frames")
     seed: int = Field(ge=0, default=41, description="Seed for the uniform initial phases")

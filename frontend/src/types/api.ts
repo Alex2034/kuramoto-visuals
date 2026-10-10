@@ -50,6 +50,8 @@ export interface ReducedResponse {
   tau_fit: number | null;
   residual: number[];
   energy: number[];
+  /** Angular velocities of all nodes per frame, in full-system node order. */
+  velocity: number[][];
   gap: number[];
   /** 1 - |r| of the chain nodes alone. Empty in complete mode. */
   chain_deficit: number[];

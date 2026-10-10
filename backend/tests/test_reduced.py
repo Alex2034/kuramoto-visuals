@@ -125,6 +125,8 @@ def test_dumbbell_matches_full_system(N, l, lam, kappa, seed):
     chain = np.exp(1j * np.array(res["chain"]))
     assert np.allclose(res["chain_deficit"], 1 - np.abs(chain.mean(axis=1)), atol=1e-12)
     assert np.all(np.diff(res["energy"]) <= 1e-9)
+    velocity_full = np.array([kuramoto_ode(0.0, np.array(th), build_dumbbell_adjacency(N, l, lam, kappa)) for th in res["full"]])
+    assert np.allclose(res["velocity"], velocity_full, atol=1e-5)
     # eq:global-center: every frame is resolved on the default run and is balanced
     assert all(a is not None for a in res["global_angles"])
     balanced = np.exp(1j * np.array(res["global_angles"])).mean(axis=1)
