@@ -47,7 +47,6 @@ const toPx = (v: Vec): Vec => ({ x: CENTER + v.x * SCALE, y: CENTER - v.y * SCAL
 
 export interface DiskLayers {
   potential: boolean;
-  full: boolean;
   geodesics: boolean;
 }
 
@@ -196,11 +195,10 @@ export default function PoincareDisk({ data, frame, view, selected, layers }: Po
       }
     }
 
-    const full = layers.full && view === "physical" ? (data.full[i] ?? []) : [];
     const norm = potentialAll ? 2 * N + data.l : N;
 
-    return { dots, own, norm, edges, markers, trails, full, unresolved, potentialAll };
-  }, [data, i, view, k, sel, all, layers.geodesics, layers.full]);
+    return { dots, own, norm, edges, markers, trails, unresolved, potentialAll };
+  }, [data, i, view, k, sel, all, layers.geodesics]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -245,10 +243,6 @@ export default function PoincareDisk({ data, frame, view, selected, layers }: Po
           {scene.trails.map((t) => (
             <polyline key={t.id} points={t.points} fill="none" stroke={t.color} strokeWidth={2} strokeLinejoin="round" />
           ))}
-          {scene.full.map((theta, j) => {
-            const p = toPx(onCircle(theta));
-            return <circle key={`f${j}`} cx={p.x} cy={p.y} r={8} fill="none" stroke="#0b0b0b" strokeWidth={1} opacity={0.45} />;
-          })}
           {scene.dots.map((dot) => {
             const p = toPx(onCircle(dot.angle));
             return dot.node ? (
@@ -324,7 +318,6 @@ export default function PoincareDisk({ data, frame, view, selected, layers }: Po
             gray dot: barycenter of all nodes
           </span>
         )}
-        {scene.full.length > 0 && <span>○ full system</span>}
         {layers.potential && (
           <span className="flex items-center gap-1">
             f, {scene.potentialAll ? "all nodes" : `cluster ${k + 1}`}: {F_MIN}

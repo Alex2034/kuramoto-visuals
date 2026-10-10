@@ -1,12 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 
 export interface Series {
   name: string;
   color: string;
   values: number[];
   dashed?: boolean;
+}
+
+/** An instant worth pointing at, drawn as a small triangle on the time axis. */
+export interface Mark {
+  t: number;
+  color: string;
+  label: string;
 }
 
 interface TimeSeriesChartProps {
@@ -16,6 +23,11 @@ interface TimeSeriesChartProps {
   /** Frame shown by the animation; drawn as a vertical cursor. */
   cursor: number;
   logY?: boolean;
+  /** Lower end of the y axis; curves that go below it leave the plot through the bottom. */
+  yMin?: number;
+  marks?: Mark[];
+  /** One-line explanation of the marks, shown under the plot when there are any. */
+  marksNote?: string;
 }
 
 const W = 360;
@@ -29,8 +41,18 @@ function fmt(v: number): string {
   return a >= 1e4 || a < 1e-2 ? v.toExponential(1) : v.toPrecision(3);
 }
 
-export default function TimeSeriesChart({ title, times, series, cursor, logY = false }: TimeSeriesChartProps) {
+export default function TimeSeriesChart({
+  title,
+  times,
+  series,
+  cursor,
+  logY = false,
+  yMin,
+  marks = [],
+  marksNote,
+}: TimeSeriesChartProps) {
   const [hover, setHover] = useState<number | null>(null);
+  const clipId = useId();
   const tr = (v: number) => (logY ? Math.log10(Math.max(v, LOG_FLOOR)) : v);
 
   let lo = Infinity;
@@ -43,6 +65,7 @@ export default function TimeSeriesChart({ title, times, series, cursor, logY = f
       if (u > hi) hi = u;
     }
   }
+  if (yMin !== undefined && Number.isFinite(lo)) lo = Math.max(lo, tr(yMin));
   if (!Number.isFinite(lo)) [lo, hi] = [0, 1];
   if (hi - lo < 1e-12) [lo, hi] = [lo - 0.5, hi + 0.5];
 
@@ -92,9 +115,13 @@ export default function TimeSeriesChart({ title, times, series, cursor, logY = f
         <text x={W - M.right} y={H - 6} textAnchor="end" fontSize={10} fill="#898781">
           t = {fmt(t1)}
         </text>
+        <clipPath id={clipId}>
+          <rect x={M.left} y={M.top} width={plotW} height={plotH} />
+        </clipPath>
         {series.map((s) => (
           <polyline
             key={s.name}
+            clipPath={`url(#${clipId})`}
             fill="none"
             stroke={s.color}
             strokeWidth={2}
@@ -105,9 +132,27 @@ export default function TimeSeriesChart({ title, times, series, cursor, logY = f
         ))}
         <line x1={x(times[shown])} x2={x(times[shown])} y1={M.top} y2={H - M.bottom} stroke="#52514e" strokeWidth={1} />
         {series.map((s) => (
-          <circle key={s.name} cx={x(times[shown])} cy={y(s.values[shown])} r={4} fill={s.color} stroke="white" strokeWidth={2} />
+          <circle
+            key={s.name}
+            cx={x(times[shown])}
+            cy={Math.min(y(s.values[shown]), H - M.bottom)}
+            r={4}
+            fill={s.color}
+            stroke="white"
+            strokeWidth={2}
+          />
         ))}
+        {marks.map((m, i) => {
+          const px = x(m.t);
+          const py = H - M.bottom;
+          return (
+            <path key={i} d={`M${px},${py - 1}l-4,-8h8z`} fill={m.color}>
+              <title>{m.label}</title>
+            </path>
+          );
+        })}
       </svg>
+      {marks.length > 0 && marksNote && <div className="mt-1 text-xs text-gray-500">▼ {marksNote}</div>}
     </div>
   );
 }
