@@ -1,0 +1,31 @@
+[project]
+name = "kuramoto-vis-backend"
+version = "0.1.0"
+description = "FastAPI backend for Kuramoto model simulation on a dumbbell graph"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.104.0",
+    "uvicorn>=0.24.0",
+    "numpy>=1.24.0",
+    "scipy>=1.11.0",
+]
+
+[dependency-groups]
+dev = [
+    "requests>=2.31.0",
+    "pytest>=8.0.0",
+    "mpmath>=1.3.0",
+]
+# Only needed for the original monolithic reference (../streamlit_example.py)
+streamlit = [
+    "streamlit>=1.30.0",
+    "pandas>=2.0.0",
+    "plotly>=5.18.0",
+]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

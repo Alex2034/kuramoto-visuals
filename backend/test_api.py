@@ -1,7 +1,7 @@
 """
 Verification script: call /simulate API and sanity-check response.
-Run with backend server: uvicorn main:app --reload
-Then: conda run -n kuramoto_vis python test_api.py
+Run with backend server: uv run uvicorn main:app --reload
+Then: uv run python test_api.py
 """
 import requests
 

@@ -30,6 +30,34 @@ def kuramoto_ode(t: float, theta: np.ndarray, W: np.ndarray) -> np.ndarray:
     return np.sum(W * np.sin(theta_diff), axis=1)
 
 
+def integrate_full(
+    theta0: np.ndarray,
+    W: np.ndarray,
+    t_eval: np.ndarray,
+    rtol: float = 1e-3,
+    atol: float = 1e-6,
+    method: str = "RK45",
+) -> np.ndarray:
+    """Integrate the full system; returns theta with shape (V, len(t_eval))."""
+    sol = solve_ivp(
+        kuramoto_ode, (t_eval[0], t_eval[-1]), theta0, t_eval=t_eval, args=(W,),
+        rtol=rtol, atol=atol, method=method,
+    )
+    return sol.y
+
+
+def fiedler(W: np.ndarray) -> float:
+    """Second-smallest eigenvalue of the weighted graph Laplacian (slowest relaxation rate near sync)."""
+    L = np.diag(W.sum(axis=1)) - W
+    return float(np.linalg.eigvalsh(L)[1])
+
+
+def energy(theta: np.ndarray, W: np.ndarray) -> float:
+    """E = -sum_{i<j} W_ij cos(theta_i - theta_j); the full system is its gradient flow."""
+    diff = theta.reshape(1, -1) - theta.reshape(-1, 1)
+    return float(-0.5 * np.sum(W * np.cos(diff)))
+
+
 def run_simulation(
     N: int,
     l: int,
@@ -50,16 +78,16 @@ def run_simulation(
     theta0 = np.random.uniform(-np.pi, np.pi, V)
 
     t_eval = np.linspace(0, t_max, n_frames)
-    sol = solve_ivp(kuramoto_ode, (0, t_max), theta0, t_eval=t_eval, args=(W,))
+    theta = integrate_full(theta0, W, t_eval)
 
     # Node types: "component" (blue) for clusters, "chain" (red) for chain
     node_types = ["component"] * N + ["chain"] * l + ["component"] * N
 
-    times = [round(float(t), 1) for t in sol.t]
+    times = [round(float(t), 1) for t in t_eval]
     frames = []
 
-    for frame_idx, t_val in enumerate(sol.t):
-        thetas = sol.y[:, frame_idx]
+    for frame_idx, t_val in enumerate(t_eval):
+        thetas = theta[:, frame_idx]
         x = np.cos(thetas)
         y = np.sin(thetas)
 

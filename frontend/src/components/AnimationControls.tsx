@@ -6,6 +6,8 @@ interface AnimationControlsProps {
   isPlaying: boolean;
   onFrameChange: (frame: number) => void;
   onPlayPause: () => void;
+  /** Shown next to the frame counter, e.g. the time of the current frame. */
+  label?: string;
 }
 
 export default function AnimationControls({
@@ -14,6 +16,7 @@ export default function AnimationControls({
   isPlaying,
   onFrameChange,
   onPlayPause,
+  label,
 }: AnimationControlsProps) {
   if (totalFrames === 0) return null;
 
@@ -34,6 +37,7 @@ export default function AnimationControls({
         className="flex-1"
       />
       <span className="text-sm text-gray-600">
+        {label ? `${label} · ` : ""}
         {currentFrame + 1} / {totalFrames}
       </span>
     </div>

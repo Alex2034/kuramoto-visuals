@@ -1,0 +1,45 @@
+# kuramoto-visuals
+
+Visualization of the Kuramoto model on a dumbbell graph (two complete graphs of
+size `N` joined by a chain of length `l`). Inherits `~/projects/CLAUDE.md`.
+
+## Layout
+- `backend/` — FastAPI app. `kuramoto.py` is the pure simulation (numpy/scipy,
+  no web or plotting imports); `main.py` only wraps it in `POST /simulate`,
+  `POST /simulate/reduced` and `GET /health`.
+- `backend/reduced.py` + `backend/mobius.py` — Watanabe–Strogatz reduction of the
+  cliques in variables `(v, alpha, theta_N)`, `v = rho e^{i phi}`,
+  `w = tanh(rho/2) e^{i phi}`; gauge fixed by conformal barycenter of `beta` = 0.
+  Near the boundary everything goes through `s = 1 - tanh(rho/2)`; never form
+  `1 - |w|` by subtraction. `frontend/src/lib/mobius.ts` mirrors these formulas.
+- `frontend/` — Next.js 14 App Router + TypeScript + Tailwind. API types live in
+  `src/types/api.ts` and must match the backend response shape.
+- `streamlit_example.py` — original monolithic reference; not the app.
+
+## Commands
+Backend is a uv project rooted at `backend/` (not the repo root), and `main.py`
+imports `kuramoto` as a top-level module, so run from inside `backend/`:
+
+```bash
+cd backend
+uv sync
+uv run uvicorn main:app --reload --port 8000
+uv run pytest                    # reduction vs full system, no server needed
+uv run python test_api.py        # needs the server running on :8000
+```
+
+Frontend:
+
+```bash
+cd frontend
+npm install
+npm run dev                      # http://localhost:3000
+npm run lint
+```
+
+## Notes
+- `.cursorrules` describes a different machine (conda env `kuramoto_vis`, no
+  uv). It is stale for this checkout — use uv as above.
+- `test_api.py` is a script against a live server; the pytest suite lives in
+  `backend/tests/`. There is no `scripts/check.sh` yet.
+- CORS in `main.py` only allows `http://localhost:3000`.
