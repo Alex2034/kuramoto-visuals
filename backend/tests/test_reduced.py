@@ -115,9 +115,15 @@ def test_isolated_complete_graph():
 )
 def test_dumbbell_matches_full_system(N, l, lam, kappa, seed):
     res = run_reduced(N, l, lam, kappa, seed=seed, n_frames=240)
-    assert res["times"][-1] == pytest.approx(5 / fiedler(build_dumbbell_adjacency(N, l, lam, kappa)))
+    tau = 1 / fiedler(build_dumbbell_adjacency(N, l, lam, kappa))
+    assert res["times"][-1] == pytest.approx(2 * tau)
     assert max(res["residual"]) < 1e-7
-    assert res["tau_fit"] == pytest.approx(res["tau"], rel=0.01)
+    assert res["tau_fit"] is None  # the default run stops before the fit window [2 tau, 4 tau]
+    long = run_reduced(N, l, lam, kappa, t_max=5 * tau, seed=seed, n_frames=240)
+    assert max(long["residual"]) < 1e-7
+    assert long["tau_fit"] == pytest.approx(tau, rel=0.01)
+    chain = np.exp(1j * np.array(res["chain"]))
+    assert np.allclose(res["chain_deficit"], 1 - np.abs(chain.mean(axis=1)), atol=1e-12)
     assert np.all(np.diff(res["energy"]) <= 1e-9)
     # eq:global-center: every frame is resolved on the default run and is balanced
     assert all(a is not None for a in res["global_angles"])

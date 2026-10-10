@@ -545,7 +545,9 @@ $\theta_N-\theta_j=\delta-s\mu_j$. For a collapsed cluster
 1-|r|^2=\frac{4(N-1)}{N^2}\sin^2\frac\delta2,\qquad
 1-|r|\approx\frac{N-1}{2N^2}\,\delta^2 ,
 \end{equation}
-so at late times $1-|r|$ decays at twice the rate of $\delta$.
+so at late times $1-|r|$ decays at twice the rate of $\delta$. The first
+formula of \eqref{eq:deficit} applies to any set of phases; the interface also
+plots it for the $l$ chain nodes alone, with $N$ replaced by $l$.
 
 \paragraph{Potential.} In \eqref{eq:potential} the point $\psi$ is not formed.
 Using $\ln P(w,\psi)=-\ln P\bigl(-w,\T_w(\psi)\bigr)$ and
@@ -609,8 +611,8 @@ $N$ & $l$ & $\lambda$ & $\kappa$ & $1/\lambda_2$ & fitted $\tau$\\
 40 & 10 & 2 & 0.5 & 474.0627 & 474.0808\\
 \bottomrule
 \end{tabular}
-\caption{Slow time scale: prediction $1/\lambda_2$ and fit, initial phases
-uniform with seed $0$. Produced by \code{backend/scripts/timescales.py}.}
+\caption{Slow time scale: prediction $1/\lambda_2$ and fit, runs up to $5\tau$,
+initial phases uniform with seed $0$. Produced by \code{backend/scripts/timescales.py}.}
 \label{tab:tau}
 \end{table}
 
@@ -734,7 +736,7 @@ Formula & Implementation & Test\\
 \eqref{eq:rho-dot}, \eqref{eq:rho-late}, \eqref{eq:deficit-late} & --- & \code{test\_rho\_rate}\\
 \eqref{eq:stable-mobius} & \code{mobius.T\_w\_boundary}, frontend \code{tBoundary} & \code{test\_stable\_T\_w\_matches\_naive}, \code{test\_stable\_T\_w\_matches\_mpmath}\\
 \eqref{eq:microscope}, \eqref{eq:microscope-limit} & \code{mobius.microscope} & \code{test\_microscope\_definition\_and\_limit}\\
-\eqref{eq:deficit} & \code{reduced.order\_deficit} & \code{test\_dumbbell\_matches\_full\_system}\\
+\eqref{eq:deficit} & \code{reduced.order\_deficit}, \code{phase\_deficit} & \code{test\_dumbbell\_matches\_full\_system}\\
 \eqref{eq:energy} & \code{kuramoto.energy} & \code{test\_energy\_is\_a\_gradient\_flow}\\
 \eqref{eq:laplacian}, \eqref{eq:tau} & \code{kuramoto.fiedler}, \code{reduced.fit\_tau} & \code{test\_linearization\_at\_synchrony\_is\_minus\_laplacian}, \code{test\_dumbbell\_matches\_full\_system}\\
 \eqref{eq:collapsed} & --- & \code{test\_collapsed\_cluster\_system}\\
@@ -748,9 +750,9 @@ Formula & Implementation & Test\\
 \paragraph{Numerical setup.} The reduced and the full system are integrated
 with an explicit Runge--Kutta method of order 8 (\code{DOP853}) at relative
 tolerance $10^{-11}$, on a grid that is dense up to $t=10/\lambda$ and uniform
-up to $t=5\tau$. For $N=l=20$, $\lambda=\kappa=1$ the reconstructed phases
-agree with the full system to about $10^{-8}$ on the whole run, where
-$\rho$ reaches $\approx1300$.
+up to $t=2\tau$ by default. For $N=l=20$, $\lambda=\kappa=1$ and a run up to $t=5\tau$ the
+reconstructed phases agree with the full system to about $10^{-8}$ throughout,
+while $\rho$ reaches $\approx1300$.
 
 %======================================================================
 \appendix

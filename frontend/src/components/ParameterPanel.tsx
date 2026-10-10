@@ -4,7 +4,7 @@ import type { ReducedMode, SimulateParams } from "@/types/api";
 
 export interface ReducedOptions {
   mode: ReducedMode;
-  /** Use t_max = 5/lambda_2 (dumbbell) instead of the slider. */
+  /** Use t_max = 2/lambda_2 (dumbbell) instead of the slider. */
   autoTime: boolean;
 }
 
@@ -116,7 +116,7 @@ export default function ParameterPanel({
               checked={reduced.autoTime}
               onChange={(e) => onReducedChange({ ...reduced, autoTime: e.target.checked })}
             />
-            {complete ? "Automatic time (30/λ)" : "Automatic time (5/λ₂)"}
+            {complete ? "Automatic time (30/λ)" : "Automatic time (2/λ₂)"}
           </label>
         )}
 

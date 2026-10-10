@@ -18,6 +18,7 @@ from mobius import T, T_w_boundary, barycenter, microscope, potential_gauge, s_o
 RTOL = 1e-11
 ATOL = 1e-12
 DISK = 4  # reals per disk: Re v, Im v, alpha, theta_N
+AUTO_TAUS = 2  # default run length in units of tau = 1/lambda_2
 
 
 def calibrate(theta_const: np.ndarray, theta_node: float) -> tuple[np.ndarray, np.ndarray]:
@@ -161,12 +162,25 @@ def global_frame(theta: np.ndarray):
     return [p.real, p.imag], np.angle(T(p, z)).tolist()
 
 
+def phase_deficit(theta: np.ndarray) -> float:
+    """1 - |r| of a set of phases via 1 - |r|^2 = (4/n^2) sum_{i<j} sin^2((theta_i - theta_j)/2)."""
+    n = theta.size
+    pairs = np.sin((theta[:, None] - theta[None, :]) / 2) ** 2
+    one_minus_r2 = 2 * pairs.sum() / n**2
+    return float(one_minus_r2 / (1 + np.sqrt(max(1 - one_minus_r2, 0.0))))
+
+
 def wrap(x):
     return (x + np.pi) % (2 * np.pi) - np.pi
 
 
 def fit_tau(times: np.ndarray, gap: np.ndarray, tau: float):
-    """Decay time of |gap| ~ exp(-t/tau_fit), fitted on the late window [2 tau, 4 tau]."""
+    """
+    Decay time of |gap| ~ exp(-t/tau_fit), fitted on the late window [2 tau, 4 tau].
+    None when the run does not cover that window.
+    """
+    if times[-1] < 4 * tau:
+        return None
     mask = (times >= 2 * tau) & (times <= 4 * tau) & (gap > 0)
     if mask.sum() < 5:
         return None
@@ -204,10 +218,10 @@ def run_reduced(
         elif tau is None:
             raise ValueError("t_max is required when the graph is disconnected (kappa = 0)")
         else:
-            t_max = 5 * tau
+            t_max = AUTO_TAUS * tau
             if max_auto_t is not None and t_max > max_auto_t:
                 raise ValueError(
-                    f"default t_max = 5/lambda_2 = {t_max:.0f} exceeds {max_auto_t:.0f}; pass t_max explicitly"
+                    f"default t_max = {AUTO_TAUS}/lambda_2 = {t_max:.0f} exceeds {max_auto_t:.0f}; pass t_max explicitly"
                 )
 
     np.random.seed(seed)
@@ -268,6 +282,7 @@ def run_reduced(
         "residual": residual.tolist(),
         "energy": [energy(theta_red[:, i], W) for i in range(len(times))],
         "gap": [],
+        "chain_deficit": [],
         "global_center": [],
         "global_angles": [],
     }
@@ -275,6 +290,7 @@ def run_reduced(
         frames = [global_frame(theta_red[:, i]) for i in range(len(times))]
         result["global_center"] = [c for c, _ in frames]
         result["global_angles"] = [a for _, a in frames]
+        result["chain_deficit"] = [phase_deficit(y[2 * DISK:, i]) for i in range(len(times))]
         gap = np.abs(wrap(y[3] - y[DISK + 3]))
         result["gap"] = gap.tolist()
         if tau is not None:

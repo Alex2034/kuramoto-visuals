@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { ReducedResponse } from "@/types/api";
 import type { DiskView } from "@/lib/mobius";
-import PoincareDisk, { CLUSTER_COLORS, type DiskLayers } from "@/components/PoincareDisk";
+import PoincareDisk, { CHAIN_COLOR, CLUSTER_COLORS, type DiskLayers } from "@/components/PoincareDisk";
 import ClusterMicroscope from "@/components/ClusterMicroscope";
 import TimeSeriesChart, { type Series } from "@/components/TimeSeriesChart";
 
@@ -101,9 +101,14 @@ export default function ReducedView({ data, frame }: ReducedViewProps) {
             cursor={i}
           />
           <TimeSeriesChart
-            title="Cluster order-parameter deficit, 1 − |r| (log)"
+            title="Order-parameter deficit, 1 − |r| (log)"
             times={data.times}
-            series={perDisk((d) => d.r_deficit, "1 − |r|, cluster ")}
+            series={[
+              ...perDisk((d) => d.r_deficit, "1 − |r|, cluster "),
+              ...(data.chain_deficit.length > 0
+                ? [{ name: "1 − |r|, chain", color: CHAIN_COLOR, values: data.chain_deficit }]
+                : []),
+            ]}
             cursor={i}
             logY
           />
