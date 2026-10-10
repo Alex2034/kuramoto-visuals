@@ -35,6 +35,8 @@ interface TimeSeriesChartProps {
   marks?: Mark[];
   /** One-line explanation of the marks, shown under the plot when there are any. */
   marksNote?: string;
+  /** What the chart shows, with every symbol defined; rendered under the plot. */
+  children?: React.ReactNode;
 }
 
 const W = 360;
@@ -60,6 +62,7 @@ export default function TimeSeriesChart({
   background = NO_BACKGROUND,
   marks = NO_MARKS,
   marksNote,
+  children,
 }: TimeSeriesChartProps) {
   const [hover, setHover] = useState<number | null>(null);
   const clipId = useId();
@@ -184,7 +187,8 @@ export default function TimeSeriesChart({
           );
         })}
       </svg>
-      {marks.length > 0 && marksNote && <div className="mt-1 text-xs text-gray-500">▼ {marksNote}</div>}
+      {marks.length > 0 && marksNote && <div className="mt-1 text-xs text-gray-600">▼ {marksNote}</div>}
+      {children && <div className="mt-1 text-xs leading-relaxed text-gray-600">{children}</div>}
     </div>
   );
 }

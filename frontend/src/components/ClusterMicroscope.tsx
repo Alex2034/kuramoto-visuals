@@ -2,6 +2,7 @@
 
 import type { DiskSeries } from "@/types/api";
 import { log10s } from "@/lib/mobius";
+import { Tex } from "@/components/Tex";
 
 interface ClusterMicroscopeProps {
   disk: DiskSeries;
@@ -28,12 +29,7 @@ export default function ClusterMicroscope({ disk, frame, color, index }: Cluster
 
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-      <div className="mb-1 flex items-baseline justify-between gap-4 text-sm">
-        <span className="font-medium">Microscope: offsets μ from the center of cluster {index + 1}</span>
-        <span className="whitespace-nowrap text-gray-600">
-          1 unit of μ = s = 10<sup>{exponent.toFixed(1)}</sup> rad
-        </span>
-      </div>
+      <div className="mb-1 text-sm font-medium">Microscope: the inside of cluster {index + 1}</div>
       <svg width={W} height={H}>
         <line x1={PAD} x2={W - PAD} y1={44} y2={44} stroke="#c3c2b7" strokeWidth={1} />
         {TICKS.map((t) => (
@@ -56,6 +52,14 @@ export default function ClusterMicroscope({ disk, frame, color, index }: Cluster
           </circle>
         ))}
       </svg>
+      <p className="max-w-[520px] text-xs leading-relaxed text-gray-600">
+        Once a cluster has collapsed, its <Tex>{"N-1"}</Tex> identical nodes agree to many digits, but their arrangement is
+        still determined. Node <Tex>{"j"}</Tex> sits at the angle <Tex>{"s\\,\\mu_j"}</Tex> from the common phase of the
+        cluster, where <Tex>{"s=1-|w|"}</Tex> is the distance of the cluster&apos;s M&ouml;bius parameter <Tex>{"w"}</Tex> from
+        the unit circle; right now <Tex>{`s\\approx10^{${exponent.toFixed(1)}}`}</Tex> rad. The dots are the numbers{" "}
+        <Tex>{"\\mu_j"}</Tex> (the axis is compressed so that <Tex>{"\\pm\\infty"}</Tex> fit): the cluster shrinks, its
+        shape stays.
+      </p>
     </div>
   );
 }

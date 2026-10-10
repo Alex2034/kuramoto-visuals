@@ -230,7 +230,7 @@ export default function PoincareDisk({ data, frame, view, selected, layers }: Po
   const c = toPx({ x: 0, y: 0 });
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+    <div className="shrink-0 rounded-lg border border-gray-200 bg-white p-4 shadow-sm" style={{ width: SIZE + 34 }}>
       <div className="relative" style={{ width: SIZE, height: SIZE }}>
         <canvas
           ref={canvasRef}
@@ -324,7 +324,7 @@ export default function PoincareDisk({ data, frame, view, selected, layers }: Po
         )}
         {layers.potential && (
           <span className="flex items-center gap-1">
-            f, {scene.potentialAll ? "all nodes" : `cluster ${k + 1}`}: {F_MIN}
+            gray map: potential of {scene.potentialAll ? "all nodes" : `cluster ${k + 1}`}, {F_MIN}
             <span
               className="inline-block h-2 w-16"
               style={{ background: `linear-gradient(to right, rgb(${RAMP_LO.join(",")}), rgb(${RAMP_HI.join(",")}))` }}
