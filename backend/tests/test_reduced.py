@@ -144,6 +144,32 @@ def test_dumbbell_matches_full_system(N, l, lam, kappa, seed):
         assert np.allclose(deficit, 1 - r_abs, atol=1e-12)
 
 
+@pytest.mark.parametrize("N,l", [(1, 1), (1, 6), (2, 1), (2, 3), (3, 2), (4, 1), (5, 1)])
+def test_small_graphs(N, l):
+    """Cliques with fewer than 3 identical nodes have no barycenter; the reduction must still be exact."""
+    res = run_reduced(N, l, 1.0, 1.0, seed=3, n_frames=120)
+    assert len(res["full"][0]) == 2 * N + l
+    assert max(res["residual"]) < 1e-7
+    assert np.all(np.diff(res["energy"]) <= 1e-9)
+    for disk in res["disks"]:
+        assert disk["canonical"] == (N >= 4)
+        assert len(disk["beta"]) == N - 1
+        for key in ("rho", "phi", "alpha", "theta_node", "r_abs", "r_deficit", "f"):
+            assert np.all(np.isfinite(disk[key])), key
+        assert np.all(np.isfinite(np.array(disk["mu"], dtype=float)))
+        assert np.allclose(disk["r_deficit"], 1 - np.array(disk["r_abs"]), atol=1e-12)
+    assert np.all(np.isfinite(res["velocity"]))
+    assert all(c is None for c in res["chain_center"]) == (l < 3)
+
+
+@pytest.mark.parametrize("N", [1, 2, 3, 4])
+def test_small_complete_graphs(N):
+    res = run_reduced(N, 0, 1.0, 0.0, seed=3, n_frames=60, mode="complete")
+    assert len(res["full"][0]) == N
+    assert max(res["residual"]) < 1e-7
+    assert np.all(np.isfinite(res["disks"][0]["f"]))
+
+
 def test_long_run_stays_finite():
     res = run_reduced(20, 20, 1.0, 1.0, t_max=1500.0, seed=0, n_frames=200)
     rho = np.array(res["disks"][0]["rho"])

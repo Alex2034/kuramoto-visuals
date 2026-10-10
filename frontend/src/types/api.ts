@@ -22,6 +22,8 @@ export interface ReducedParams {
 
 /** One clique in WS variables: w = tanh(rho/2) e^{i phi}, zeta = e^{i alpha}; arrays are per frame. */
 export interface DiskSeries {
+  /** False for a clique with fewer than 3 identical nodes: it has no conformal barycenter, so no center is drawn. */
+  canonical: boolean;
   beta: number[];
   rho: number[];
   phi: number[];

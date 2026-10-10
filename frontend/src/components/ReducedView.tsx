@@ -33,6 +33,7 @@ const wrapAngle = (a: number) => a - 2 * Math.PI * Math.round(a / (2 * Math.PI))
 function nodeCrossings(data: ReducedResponse): Mark[] {
   const marks: Mark[] = [];
   data.disks.forEach((d, idx) => {
+    if (d.beta.length === 0) return; // a one-node clique has no cluster to pass through
     const delta = d.theta_node.map((th, j) => wrapAngle(th - (d.alpha[j] + d.phi[j] + Math.PI)));
     for (let j = 0; j + 1 < delta.length; j++) {
       if (d.rho[j] < COLLAPSED_RHO || delta[j] * delta[j + 1] >= 0) continue;
@@ -84,28 +85,44 @@ export default function ReducedView({ data, frame }: ReducedViewProps) {
   const [layers, setLayers] = useState<DiskLayers>({ potential: true, geodesics: true });
 
   const i = Math.min(frame, data.times.length - 1);
-  const k = selected === "all" ? 0 : Math.min(selected, data.disks.length - 1);
-  const deficits = [...data.disks.map((d) => d.r_deficit), ...(data.chain_deficit.length > 0 ? [data.chain_deficit] : [])];
-  // the axis ends a decade below the smallest final value, so a zero crossing does not stretch it
-  const deficitFloor = Math.min(...deficits.map((v) => v[v.length - 1])) / 10;
+  // the view can be centered only on a cluster that has a barycenter; otherwise fall back to all nodes
+  const dumbbell = data.disks.length > 1;
+  const center: number | "all" =
+    selected !== "all" && data.disks[Math.min(selected, data.disks.length - 1)].canonical
+      ? Math.min(selected, data.disks.length - 1)
+      : dumbbell
+        ? "all"
+        : 0;
   const crossings = useMemo(() => nodeCrossings(data), [data]);
   const velocity = useMemo(() => velocityCurves(data), [data]);
   const rhoSeries = useMemo(
     () =>
-      data.disks.map((d, idx) => ({
-        name: `ρ − λt, cluster ${idx + 1}`,
-        color: CLUSTER_COLORS[idx],
-        values: d.rho.map((rho, j) => rho - data.lambda_val * data.times[j]),
-      })),
+      data.disks.flatMap((d, idx) =>
+        // w describes the identical nodes; a one-node clique has none
+        d.beta.length === 0
+          ? []
+          : [
+              {
+                name: `ρ − λt, cluster ${idx + 1}`,
+                color: CLUSTER_COLORS[idx],
+                values: d.rho.map((rho, j) => rho - data.lambda_val * data.times[j]),
+              },
+            ],
+      ),
     [data],
   );
   const deficitSeries = useMemo(
-    () => [
-      ...data.disks.map((d, idx) => ({ name: `1 − |r|, cluster ${idx + 1}`, color: CLUSTER_COLORS[idx], values: d.r_deficit })),
-      ...(data.chain_deficit.length > 0 ? [{ name: "1 − |r|, chain", color: CHAIN_COLOR, values: data.chain_deficit }] : []),
-    ],
+    () =>
+      [
+        ...data.disks.map((d, idx) => ({ name: `1 − |r|, cluster ${idx + 1}`, color: CLUSTER_COLORS[idx], values: d.r_deficit })),
+        ...(data.chain_deficit.length > 0 ? [{ name: "1 − |r|, chain", color: CHAIN_COLOR, values: data.chain_deficit }] : []),
+        // a group of one node has |r| = 1 identically: nothing to plot on a log axis
+      ].filter((s) => s.values.some((v) => v > 0)),
     [data],
   );
+  // the axis ends a decade below the smallest final value, so a zero crossing does not stretch it
+  const finals = deficitSeries.map((s) => s.values[s.values.length - 1]).filter((v) => v > 0);
+  const deficitFloor = finals.length > 0 ? Math.min(...finals) / 10 : undefined;
 
   return (
     <div className="flex flex-col gap-4">
@@ -122,19 +139,21 @@ export default function ReducedView({ data, frame }: ReducedViewProps) {
             </button>
           ))}
         </div>
-        {view === "centered" && data.disks.length > 1 && (
+        {view === "centered" && dumbbell && (
           <label className="flex items-center gap-2 text-gray-600">
             Center
             <select
-              value={selected === "all" ? "all" : k}
+              value={center}
               onChange={(e) => setSelected(e.target.value === "all" ? "all" : parseInt(e.target.value, 10))}
               className="rounded border border-gray-300 px-1 py-0.5"
             >
-              {data.disks.map((_, idx) => (
-                <option key={idx} value={idx}>
-                  cluster {idx + 1}
-                </option>
-              ))}
+              {data.disks.map((d, idx) =>
+                d.canonical ? (
+                  <option key={idx} value={idx}>
+                    cluster {idx + 1}
+                  </option>
+                ) : null,
+              )}
               <option value="all">all nodes</option>
             </select>
           </label>
@@ -150,7 +169,7 @@ export default function ReducedView({ data, frame }: ReducedViewProps) {
 
       <div className="flex flex-col gap-4">
         <div className="flex flex-wrap items-start gap-4">
-          <PoincareDisk data={data} frame={i} view={view} selected={selected} layers={layers} />
+          <PoincareDisk data={data} frame={i} view={view} selected={center} layers={layers} />
           <div className="rounded-lg border border-gray-200 bg-white p-3 text-xs text-gray-600 shadow-sm">
             t = {data.times[i].toPrecision(5)}
             {data.tau !== null && (
@@ -186,9 +205,9 @@ export default function ReducedView({ data, frame }: ReducedViewProps) {
         </div>
 
         <div className="flex flex-wrap gap-4">
-          {data.disks.map((d, idx) => (
-            <ClusterMicroscope key={idx} disk={d} frame={i} color={CLUSTER_COLORS[idx]} index={idx} />
-          ))}
+          {data.disks.map((d, idx) =>
+            d.beta.length > 0 ? <ClusterMicroscope key={idx} disk={d} frame={i} color={CLUSTER_COLORS[idx]} index={idx} /> : null,
+          )}
         </div>
       </div>
     </div>

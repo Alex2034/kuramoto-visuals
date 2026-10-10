@@ -55,7 +55,7 @@ export default function ParameterPanel({
           <span className="text-sm text-gray-600">Size of complete graphs (N)</span>
           <input
             type="range"
-            min={5}
+            min={1}
             max={50}
             value={params.N}
             onChange={(e) => update("N", parseInt(e.target.value, 10))}
@@ -69,7 +69,7 @@ export default function ParameterPanel({
             <span className="text-sm text-gray-600">Chain length (l)</span>
             <input
               type="range"
-              min={5}
+              min={1}
               max={50}
               value={params.l}
               onChange={(e) => update("l", parseInt(e.target.value, 10))}

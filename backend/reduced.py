@@ -21,10 +21,17 @@ DISK = 4  # reals per disk: Re v, Im v, alpha, theta_N
 AUTO_TAUS = 3  # default run length in units of tau = 1/lambda_2
 
 
+MIN_CANONICAL = 3  # identical nodes needed for the conformal barycenter to exist
+
+
 def calibrate(theta_const: np.ndarray, theta_node: float) -> tuple[np.ndarray, np.ndarray]:
-    """Canonical gauge for one clique: returns (beta_angles, disk state at t = 0)."""
+    """
+    Gauge for one clique: returns (beta_angles, disk state at t = 0). Canonical gauge
+    (barycenter of beta at 0) when the clique has at least 3 identical nodes; otherwise the
+    barycenter does not exist and the gauge of the thesis is used, w(0) = 0, beta = z(0).
+    """
     z = np.exp(1j * theta_const)
-    p0 = barycenter(z)
+    p0 = barycenter(z) if z.size >= MIN_CANONICAL else 0j
     beta = np.angle(T(p0, z))
     r = abs(p0)
     v = -2 * np.arctanh(r) * p0 / r if r > 0 else 0j
@@ -161,6 +168,8 @@ GLOBAL_MIN_GAP = 1e-12
 
 def resolved_barycenter(theta: np.ndarray):
     """Conformal barycenter of the given phases, or None when they are too close together to resolve it."""
+    if theta.size < 3:
+        return None
     try:
         p = barycenter(np.exp(1j * theta))
     except ValueError:
@@ -271,6 +280,8 @@ def run_reduced(
         cr = np.array([cross_ratios(np.exp(1j * full[consts, i])) for i in np.flatnonzero(early)])
         drift = np.abs(cr / cr[0] - 1).max(axis=1) if cr.size else np.array([])
         disks.append({
+            # False for a clique with fewer than 3 identical nodes: P = -zeta w is then not a barycenter
+            "canonical": bool(beta.size >= MIN_CANONICAL),
             "beta": beta.tolist(),
             "rho": rho.tolist(),
             "phi": phi.tolist(),

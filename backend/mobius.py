@@ -67,6 +67,8 @@ def barycenter(z, tol=1e-15, max_iter=200):
     mean(T_p(z)) = 0. Newton step taken in the frame recentered at the current p.
     """
     z = np.asarray(z, dtype=complex)
+    if z.size < 3:
+        raise ValueError("conformal barycenter needs at least 3 points")
     p = 0j
     for _ in range(max_iter):
         y = T(p, z)

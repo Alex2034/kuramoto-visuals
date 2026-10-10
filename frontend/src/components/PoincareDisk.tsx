@@ -167,6 +167,8 @@ export default function PoincareDisk({ data, frame, view, selected, layers }: Po
 
     if (drawable && !unresolved) {
       data.disks.forEach((d, idx) => {
+        // a clique with fewer than 3 identical nodes has no barycenter
+        if (!d.canonical) return;
         const isOrigin = view === "centered" && !all && idx === k;
         if (view === "physical") {
           const pts: Vec[] = [];
@@ -296,16 +298,18 @@ export default function PoincareDisk({ data, frame, view, selected, layers }: Po
           ))}
           {data.chain.length > 0 ? "square: node attached to the chain" : "square: node N"}
         </span>
-        <span>
-          {data.disks.map((_, idx) => (
-            <span
-              key={idx}
-              className="mr-1 inline-block h-2.5 w-2.5 rounded-full border-2 align-middle"
-              style={{ borderColor: CLUSTER_COLORS[idx] }}
-            />
-          ))}
-          ring: barycenter of a cluster{view === "physical" ? ", with trail" : ""}
-        </span>
+        {data.disks.some((d) => d.canonical) && (
+          <span>
+            {data.disks.map((_, idx) => (
+              <span
+                key={idx}
+                className="mr-1 inline-block h-2.5 w-2.5 rounded-full border-2 align-middle"
+                style={{ borderColor: CLUSTER_COLORS[idx] }}
+              />
+            ))}
+            ring: barycenter of a cluster{view === "physical" ? ", with trail" : ""}
+          </span>
+        )}
         {data.chain_center.length > 0 && (
           <span>
             <span className="mr-1 inline-block h-2.5 w-2.5 rounded-full border-2 align-middle" style={{ borderColor: ALL_COLOR }} />

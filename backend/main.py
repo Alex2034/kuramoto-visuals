@@ -22,8 +22,8 @@ app.add_middleware(
 
 
 class SimulateRequest(BaseModel):
-    N: int = Field(ge=5, le=50, default=20, description="Size of complete graphs")
-    l: int = Field(ge=5, le=50, default=20, description="Chain length")
+    N: int = Field(ge=1, le=50, default=20, description="Size of complete graphs")
+    l: int = Field(ge=1, le=50, default=20, description="Chain length")
     lambda_val: float = Field(ge=0.0, le=10.0, default=1.0, description="Coupling in complete graphs")
     kappa: float = Field(ge=0.0, le=10.0, default=1.0, description="Coupling in chain")
     t_max: float = Field(ge=10, le=2000, default=1000, description="Simulation time")
@@ -49,8 +49,8 @@ def simulate(req: SimulateRequest):
 
 class ReducedRequest(BaseModel):
     mode: Literal["dumbbell", "complete"] = Field(default="dumbbell", description="Dumbbell graph or one isolated complete graph")
-    N: int = Field(ge=5, le=50, default=20, description="Size of complete graphs")
-    l: int = Field(ge=5, le=50, default=20, description="Chain length (dumbbell only)")
+    N: int = Field(ge=1, le=50, default=20, description="Size of complete graphs")
+    l: int = Field(ge=1, le=50, default=20, description="Chain length (dumbbell only)")
     lambda_val: float = Field(gt=0.0, le=10.0, default=1.0, description="Coupling in complete graphs")
     kappa: float = Field(ge=0.0, le=10.0, default=1.0, description="Coupling in chain (dumbbell only)")
     t_max: Optional[float] = Field(gt=0, le=20000, default=None, description="Simulation time; default 3/lambda_2")
