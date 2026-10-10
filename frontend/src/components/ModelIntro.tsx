@@ -17,7 +17,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
  */
 export default function ModelIntro() {
   return (
-    <article className="max-w-3xl rounded-lg border border-gray-200 bg-white p-8 leading-relaxed text-gray-800 shadow-sm">
+    <article className="rounded-lg border border-gray-200 bg-white p-8 leading-relaxed text-gray-800 shadow-sm">
       <h1 className="text-2xl font-bold text-black">Kuramoto oscillators on a dumbbell graph</h1>
       <p className="mt-3">
         This site simulates coupled phase oscillators on a graph made of two complete graphs joined by a chain, and shows
@@ -183,6 +183,46 @@ export default function ModelIntro() {
           node:
         </p>
         <Formula id="eq:deficit-late" />
+      </Section>
+
+      <Section title="8. Reading the simulation">
+        <p>
+          <strong>The disk.</strong> Every node is drawn on the unit circle at its phase,{" "}
+          <Tex>{"z_j=\\e^{\\ii\\theta_j}"}</Tex>; a node attached to the chain is a square, and chain nodes are colored
+          by their position between the two clusters. The markers inside the disk are conformal barycenters: a colored
+          ring for the <Tex>{"N-1"}</Tex> identical nodes of a cluster, a gray ring for the chain, a gray dot for all nodes.
+          A barycenter sits near the center while its points are spread out and runs to the circle as they gather. The{" "}
+          <em>Physical</em> view shows the nodes as they are. The <em>Centered</em> view shows the same instant through the
+          M&ouml;bius map that moves the chosen barycenter to the center: centered on a cluster, that cluster is a rigid
+          rotating pattern; centered on all nodes, the configuration stays balanced, so a short arc of nearly synchronized
+          phases is shown magnified.
+        </p>
+        <p>
+          <strong>The gray map</strong> is the potential built from the current positions of a group of{" "}
+          <Tex>{"n"}</Tex> nodes with the Poisson kernel; it is darkest near the nodes, and its maximum over the disk is
+          their barycenter:
+        </p>
+        <Formula id="eq:physical-potential" />
+        <p>
+          <strong>The charts.</strong> The first shows the hyperbolic distance <Tex>{"\\rho"}</Tex> of each cluster
+          barycenter from the center of the disk, <Tex>{"|P|=\\tanh(\\rho/2)"}</Tex>, with its drift{" "}
+          <Tex>{"\\lambda t"}</Tex> removed, so the curves level off once a cluster has collapsed. The second shows{" "}
+          <Tex>{"1-|r|"}</Tex> for each cluster (with its attached node) and for the chain; zero means that all phases of
+          the group coincide. A triangle on its time axis marks an instant when an attached node passes through the phase of
+          its cluster: for that instant the whole cluster is one point and <Tex>{"1-|r|"}</Tex> touches zero. The third
+          shows the angular velocity <Tex>{"\\dot\\theta_j"}</Tex> of every node as a thin line and the mean over each
+          group as a thick one; its vertical range follows the means, so early peaks of single nodes are cut off.
+        </p>
+        <p>
+          <strong>The microscope</strong> shows the numbers <Tex>{"\\mu_j"}</Tex> of section 6 for each cluster, on an
+          axis compressed so that <Tex>{"\\pm\\infty"}</Tex> fit:
+        </p>
+        <Formula id="eq:microscope" />
+        <p>
+          <strong>Accuracy.</strong> The site integrates the reduced equations of section 4. In the tests of the
+          repository a direct integration of all <Tex>{"2N+l"}</Tex> phases agrees with it to about{" "}
+          <Tex>{"10^{-7}"}</Tex> over a whole run.
+        </p>
       </Section>
     </article>
   );

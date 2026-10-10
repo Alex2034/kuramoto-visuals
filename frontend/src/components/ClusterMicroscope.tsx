@@ -52,13 +52,9 @@ export default function ClusterMicroscope({ disk, frame, color, index }: Cluster
           </circle>
         ))}
       </svg>
-      <p className="max-w-[520px] text-xs leading-relaxed text-gray-600">
-        Once a cluster has collapsed, its <Tex>{"N-1"}</Tex> identical nodes agree to many digits, but their arrangement is
-        still determined. Node <Tex>{"j"}</Tex> sits at the angle <Tex>{"s\\,\\mu_j"}</Tex> from the common phase of the
-        cluster, where <Tex>{"s=1-|w|"}</Tex> is the distance of the cluster&apos;s M&ouml;bius parameter <Tex>{"w"}</Tex> from
-        the unit circle; right now <Tex>{`s\\approx10^{${exponent.toFixed(1)}}`}</Tex> rad. The dots are the numbers{" "}
-        <Tex>{"\\mu_j"}</Tex> (the axis is compressed so that <Tex>{"\\pm\\infty"}</Tex> fit): the cluster shrinks, its
-        shape stays.
+      <p className="text-xs text-gray-600">
+        <Tex>{`\\arg z_j-\\Theta=s\\,\\mu_j,\\qquad s=1-|w|\\approx10^{${exponent.toFixed(1)}}`}</Tex>; dots:{" "}
+        <Tex>{"\\mu_j"}</Tex>, <Tex>{"\\Theta"}</Tex>: phase of the cluster
       </p>
     </div>
   );

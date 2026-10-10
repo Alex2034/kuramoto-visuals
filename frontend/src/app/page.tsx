@@ -65,6 +65,7 @@ export default function Home() {
       };
       setReduced(await post<ReducedResponse>("/simulate/reduced", body));
       setCurrentFrame(0);
+      setIsPlaying(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unknown error");
       setReduced(null);
@@ -121,10 +122,10 @@ export default function Home() {
               reduced={reducedOptions}
               onReducedChange={setReducedOptions}
             />
+            <GraphDiagram N={params.N} l={params.l} mode={reducedOptions.mode} />
           </aside>
 
           <div className="flex min-w-0 flex-1 flex-col gap-4">
-            <GraphDiagram N={params.N} l={params.l} mode={reducedOptions.mode} />
             <AnimationControls
               currentFrame={frameIndex}
               totalFrames={totalFrames}
