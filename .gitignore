@@ -17,3 +17,13 @@ frontend/.env*.local
 .idea/
 .vscode/
 *.swp
+# LaTeX build files (source/main.pdf itself is committed)
+source/*.aux
+source/*.log
+source/*.out
+source/*.toc
+source/*.fls
+source/*.fdb_latexmk
+source/*.synctex.gz
+
+.DS_Store

@@ -12,6 +12,11 @@ size `N` joined by a chain of length `l`). Inherits `~/projects/CLAUDE.md`.
   `w = tanh(rho/2) e^{i phi}`; gauge fixed by conformal barycenter of `beta` = 0.
   Near the boundary everything goes through `s = 1 - tanh(rho/2)`; never form
   `1 - |w|` by subtraction. `frontend/src/lib/mobius.ts` mirrors these formulas.
+- `source/main.tex` → `source/main.pdf` — the mathematical reference. Equations
+  carry stable labels `eq:<slug>`; section 9 maps each to its implementation and
+  test (`backend/tests/test_formulas.py` checks the statements the code does not
+  use). When the model changes: document first, then tests, then code; rebuild
+  with `cd source && latexmk -pdf main.tex` and commit the PDF.
 - `frontend/` — Next.js 14 App Router + TypeScript + Tailwind. API types live in
   `src/types/api.ts` and must match the backend response shape.
 - `streamlit_example.py` — original monolithic reference; not the app.
