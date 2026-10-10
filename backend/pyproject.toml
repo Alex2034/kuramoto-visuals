@@ -12,15 +12,8 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "requests>=2.31.0",
     "pytest>=8.0.0",
     "mpmath>=1.3.0",
-]
-# Only needed for the original monolithic reference (../streamlit_example.py)
-streamlit = [
-    "streamlit>=1.30.0",
-    "pandas>=2.0.0",
-    "plotly>=5.18.0",
 ]
 
 [tool.uv]

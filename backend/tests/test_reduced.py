@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from kuramoto import build_dumbbell_adjacency, fiedler, integrate_full, kuramoto_ode, run_simulation
+from kuramoto import build_dumbbell_adjacency, fiedler, integrate_full, kuramoto_ode
 from mobius import T, T_inv, barycenter, potential_gauge, w_from_v
 from reduced import (
     DISK, calibrate, cross_ratios, initial_state, integrate_reduced, reconstruct,
@@ -179,9 +179,3 @@ def test_long_run_stays_finite():
             assert np.all(np.isfinite(disk[key])), key
     assert np.all(np.isfinite(res["residual"]))
     assert max(res["residual"]) < 1e-7
-
-
-def test_full_simulation_response_shape():
-    res = run_simulation(10, 5, 1.0, 1.0, 100, n_frames=30)
-    assert len(res["frames"]) == len(res["times"]) == 30
-    assert len(res["frames"][0]["points"]) == 2 * 10 + 5

@@ -5,7 +5,7 @@ size `N` joined by a chain of length `l`). Inherits `~/projects/CLAUDE.md`.
 
 ## Layout
 - `backend/` — FastAPI app. `kuramoto.py` is the pure simulation (numpy/scipy,
-  no web or plotting imports); `main.py` only wraps it in `POST /simulate`,
+  no web or plotting imports); `main.py` only wraps it in
   `POST /simulate/reduced` and `GET /health`.
 - `backend/reduced.py` + `backend/mobius.py` — Watanabe–Strogatz reduction of the
   cliques in variables `(v, alpha, theta_N)`, `v = rho e^{i phi}`,
@@ -24,7 +24,6 @@ size `N` joined by a chain of length `l`). Inherits `~/projects/CLAUDE.md`.
   shown in the interface must be defined next to where it appears.
 - `frontend/` — Next.js 14 App Router + TypeScript + Tailwind. API types live in
   `src/types/api.ts` and must match the backend response shape.
-- `streamlit_example.py` — original monolithic reference; not the app.
 
 ## Commands
 Backend is a uv project rooted at `backend/` (not the repo root), and `main.py`
@@ -35,7 +34,6 @@ cd backend
 uv sync
 uv run uvicorn main:app --reload --port 8000
 uv run pytest                    # reduction vs full system, no server needed
-uv run python test_api.py        # needs the server running on :8000
 ```
 
 Frontend:
@@ -48,8 +46,5 @@ npm run lint
 ```
 
 ## Notes
-- `.cursorrules` describes a different machine (conda env `kuramoto_vis`, no
-  uv). It is stale for this checkout — use uv as above.
-- `test_api.py` is a script against a live server; the pytest suite lives in
-  `backend/tests/`. There is no `scripts/check.sh` yet.
+- The pytest suite lives in `backend/tests/`. There is no `scripts/check.sh` yet.
 - CORS in `main.py` only allows `http://localhost:3000`.
