@@ -114,15 +114,27 @@ def integrate_reduced(y0, betas, lam, kappa, N, l, t_eval, rtol=RTOL, atol=ATOL)
 
 
 def time_grid(lam: float, t_max: float, n_frames: int) -> np.ndarray:
-    """Dense up to 10/lambda (cluster collapse), then uniform up to t_max (chain relaxation)."""
-    t_fast = 10 / lam if lam > 0 else t_max
-    if t_fast >= t_max:
-        return np.linspace(0, t_max, n_frames)
-    n_fast = n_frames // 3
-    return np.concatenate((
-        np.linspace(0, t_fast, n_fast, endpoint=False),
-        np.linspace(t_fast, t_max, n_frames - n_fast),
-    ))
+    """
+    Output times t_k = A sinh(b k / (n - 1)): the step starts at the resolution needed for
+    the cluster collapse (10/lambda over a third of the frames) and grows smoothly, by a
+    constant factor per frame at late times, up to t_max. The step must not jump: frames are
+    played back at a fixed rate, so a jump in the step looks like a jump in the dynamics.
+    """
+    uniform = np.linspace(0, t_max, n_frames)
+    if lam <= 0:
+        return uniform
+    first_step = (10 / lam) / (n_frames // 3)
+    g = first_step * (n_frames - 1) / t_max  # = b / sinh(b)
+    if g >= 1:
+        return uniform
+    lo, hi = 1e-9, 50.0
+    for _ in range(100):
+        mid = (lo + hi) / 2
+        lo, hi = (mid, hi) if mid / np.sinh(mid) > g else (lo, mid)
+    b = (lo + hi) / 2
+    grid = t_max * np.sinh(b * np.arange(n_frames) / (n_frames - 1)) / np.sinh(b)
+    grid[-1] = t_max
+    return grid
 
 
 def cross_ratios(z: np.ndarray) -> np.ndarray:

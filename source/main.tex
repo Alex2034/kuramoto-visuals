@@ -756,8 +756,8 @@ Formula & Implementation & Test\\
 
 \paragraph{Numerical setup.} The reduced and the full system are integrated
 with an explicit Runge--Kutta method of order 8 (\code{DOP853}) at relative
-tolerance $10^{-11}$, on a grid that is dense up to $t=10/\lambda$ and uniform
-up to $t=3\tau$ by default. For $N=l=20$, $\lambda=\kappa=1$ and a run up to $t=5\tau$ the
+tolerance $10^{-11}$, on output times $t_k\propto\sinh(bk)$ up to $t=3\tau$ by default: the step
+is fine during the collapse of the cliques and grows smoothly afterwards. For $N=l=20$, $\lambda=\kappa=1$ and a run up to $t=5\tau$ the
 reconstructed phases agree with the full system to about $10^{-8}$ throughout,
 while $\rho$ reaches $\approx1300$.
 
