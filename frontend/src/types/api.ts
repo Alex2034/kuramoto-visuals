@@ -7,23 +7,6 @@ export interface SimulateParams {
   seed: number;
 }
 
-export interface Point {
-  index: number;
-  x: number;
-  y: number;
-  nodeType: "component" | "chain";
-}
-
-export interface Frame {
-  t: number;
-  points: Point[];
-}
-
-export interface SimulateResponse {
-  times: number[];
-  frames: Frame[];
-}
-
 export type ReducedMode = "dumbbell" | "complete";
 
 export interface ReducedParams {
@@ -74,4 +57,6 @@ export interface ReducedResponse {
   global_center: ([number, number] | null)[];
   /** Phases of all nodes in the frame centered at global_center, in full-system node order. */
   global_angles: (number[] | null)[];
+  /** Conformal barycenter of the chain nodes per frame; null where it is not resolved. */
+  chain_center: ([number, number] | null)[];
 }

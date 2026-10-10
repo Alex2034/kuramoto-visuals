@@ -8,6 +8,9 @@ interface ClusterMicroscopeProps {
   frame: number;
   color: string;
   index: number;
+  /** Number of clusters to choose from; the switch is shown when there is more than one. */
+  count: number;
+  onSelect: (index: number) => void;
 }
 
 const W = 520;
@@ -22,14 +25,27 @@ const xOf = (mu: number) => PAD + (Math.atan(mu) / Math.PI + 0.5) * (W - 2 * PAD
  * Internal shape of a collapsed cluster. Phase offsets from the cluster center are
  * s * mu_j with s = 1 - |w|; the angles themselves lose this below machine precision.
  */
-export default function ClusterMicroscope({ disk, frame, color, index }: ClusterMicroscopeProps) {
+export default function ClusterMicroscope({ disk, frame, color, index, count, onSelect }: ClusterMicroscopeProps) {
   const mu = disk.mu[frame] ?? [];
   const exponent = log10s(disk.rho[frame]);
 
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
       <div className="mb-1 flex items-baseline justify-between gap-4 text-sm">
-        <span className="font-medium">Cluster {index + 1} microscope: offsets μ from the center</span>
+        <span className="flex items-center gap-2 font-medium">
+          Microscope: offsets μ from the center of cluster
+          {count > 1 ? (
+            <select value={index} onChange={(e) => onSelect(parseInt(e.target.value, 10))} className="rounded border border-gray-300 px-1 py-0.5 font-normal">
+              {Array.from({ length: count }, (_, idx) => (
+                <option key={idx} value={idx}>
+                  {idx + 1}
+                </option>
+              ))}
+            </select>
+          ) : (
+            index + 1
+          )}
+        </span>
         <span className="whitespace-nowrap text-gray-600">
           1 unit of μ = s = 10<sup>{exponent.toFixed(1)}</sup> rad
         </span>

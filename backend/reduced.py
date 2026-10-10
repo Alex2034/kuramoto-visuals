@@ -18,7 +18,7 @@ from mobius import T, T_w_boundary, barycenter, microscope, potential_gauge, s_o
 RTOL = 1e-11
 ATOL = 1e-12
 DISK = 4  # reals per disk: Re v, Im v, alpha, theta_N
-AUTO_TAUS = 2  # default run length in units of tau = 1/lambda_2
+AUTO_TAUS = 3  # default run length in units of tau = 1/lambda_2
 
 
 def calibrate(theta_const: np.ndarray, theta_node: float) -> tuple[np.ndarray, np.ndarray]:
@@ -147,19 +147,24 @@ def order_deficit(rho, phi, alpha, theta_node, beta, N) -> float:
 GLOBAL_MIN_GAP = 1e-12
 
 
+def resolved_barycenter(theta: np.ndarray):
+    """Conformal barycenter of the given phases, or None when they are too close together to resolve it."""
+    try:
+        p = barycenter(np.exp(1j * theta))
+    except ValueError:
+        return None
+    return None if 1 - abs(p) < GLOBAL_MIN_GAP else p
+
+
 def global_frame(theta: np.ndarray):
     """
     Conformal barycenter of all nodes and their phases in the frame centered at it.
     Returns (center, angles), or (None, None) when the configuration is too narrow to resolve.
     """
-    z = np.exp(1j * theta)
-    try:
-        p = barycenter(z)
-    except ValueError:
+    p = resolved_barycenter(theta)
+    if p is None:
         return None, None
-    if 1 - abs(p) < GLOBAL_MIN_GAP:
-        return None, None
-    return [p.real, p.imag], np.angle(T(p, z)).tolist()
+    return [p.real, p.imag], np.angle(T(p, np.exp(1j * theta))).tolist()
 
 
 def phase_deficit(theta: np.ndarray) -> float:
@@ -285,11 +290,14 @@ def run_reduced(
         "chain_deficit": [],
         "global_center": [],
         "global_angles": [],
+        "chain_center": [],
     }
     if n_disks == 2:
         frames = [global_frame(theta_red[:, i]) for i in range(len(times))]
         result["global_center"] = [c for c, _ in frames]
         result["global_angles"] = [a for _, a in frames]
+        chain_centers = [resolved_barycenter(y[2 * DISK:, i]) for i in range(len(times))]
+        result["chain_center"] = [None if p is None else [p.real, p.imag] for p in chain_centers]
         result["chain_deficit"] = [phase_deficit(y[2 * DISK:, i]) for i in range(len(times))]
         gap = np.abs(wrap(y[3] - y[DISK + 3]))
         result["gap"] = gap.tolist()

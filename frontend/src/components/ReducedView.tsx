@@ -13,7 +13,7 @@ interface ReducedViewProps {
 }
 
 const VIEWS: { id: DiskView; label: string; hint: string }[] = [
-  { id: "physical", label: "Physical", hint: "Oscillators as they are; ◎ is the conformal barycenter P = −ζw of each cluster." },
+  { id: "physical", label: "Physical", hint: "Oscillators as they are, with the barycenters of each cluster, of the chain and of all nodes inside the disk." },
   { id: "centered", label: "Centered", hint: "Möbius-recentered at a cluster center (the cluster is the fixed constellation β rotated by ζ) or at the barycenter of all nodes." },
 ];
 
@@ -26,10 +26,12 @@ const LAYERS: { id: keyof DiskLayers; label: string }[] = [
 export default function ReducedView({ data, frame }: ReducedViewProps) {
   const [view, setView] = useState<DiskView>("physical");
   const [selected, setSelected] = useState<number | "all">(0);
+  const [microCluster, setMicroCluster] = useState(0);
   const [layers, setLayers] = useState<DiskLayers>({ potential: true, full: false, geodesics: true });
 
   const i = Math.min(frame, data.times.length - 1);
   const k = selected === "all" ? 0 : Math.min(selected, data.disks.length - 1);
+  const m = Math.min(microCluster, data.disks.length - 1);
   const perDisk = (pick: (d: ReducedResponse["disks"][number]) => number[], symbol: string): Series[] =>
     data.disks.map((d, idx) => ({ name: `${symbol}${idx + 1}`, color: CLUSTER_COLORS[idx], values: pick(d) }));
 
@@ -48,7 +50,7 @@ export default function ReducedView({ data, frame }: ReducedViewProps) {
             </button>
           ))}
         </div>
-        {data.disks.length > 1 && (
+        {view === "centered" && data.disks.length > 1 && (
           <label className="flex items-center gap-2 text-gray-600">
             Center
             <select
@@ -78,7 +80,14 @@ export default function ReducedView({ data, frame }: ReducedViewProps) {
         <div className="flex flex-wrap items-start gap-4">
           <PoincareDisk data={data} frame={i} view={view} selected={selected} layers={layers} />
           <div className="flex flex-col gap-4">
-            <ClusterMicroscope disk={data.disks[k]} frame={i} color={CLUSTER_COLORS[k]} index={k} />
+            <ClusterMicroscope
+              disk={data.disks[m]}
+              frame={i}
+              color={CLUSTER_COLORS[m]}
+              index={m}
+              count={data.disks.length}
+              onSelect={setMicroCluster}
+            />
             <div className="rounded-lg border border-gray-200 bg-white p-3 text-xs text-gray-600 shadow-sm">
               t = {data.times[i].toPrecision(5)}
               {data.tau !== null && (

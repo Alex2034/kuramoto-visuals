@@ -116,7 +116,7 @@ def test_isolated_complete_graph():
 def test_dumbbell_matches_full_system(N, l, lam, kappa, seed):
     res = run_reduced(N, l, lam, kappa, seed=seed, n_frames=240)
     tau = 1 / fiedler(build_dumbbell_adjacency(N, l, lam, kappa))
-    assert res["times"][-1] == pytest.approx(2 * tau)
+    assert res["times"][-1] == pytest.approx(3 * tau)
     assert max(res["residual"]) < 1e-7
     assert res["tau_fit"] is None  # the default run stops before the fit window [2 tau, 4 tau]
     long = run_reduced(N, l, lam, kappa, t_max=5 * tau, seed=seed, n_frames=240)
@@ -129,6 +129,13 @@ def test_dumbbell_matches_full_system(N, l, lam, kappa, seed):
     assert all(a is not None for a in res["global_angles"])
     balanced = np.exp(1j * np.array(res["global_angles"])).mean(axis=1)
     assert np.abs(balanced).max() < 1e-9
+    # the global center is the barycenter of the full system's phases, frame by frame
+    for i in (0, len(res["times"]) // 2, len(res["times"]) - 1):
+        z_full = np.exp(1j * np.array(res["full"][i]))
+        assert abs(barycenter(z_full) - complex(*res["global_center"][i])) < 1e-6
+        # eq:chain-center
+        z_chain = np.exp(1j * np.array(res["chain"][i]))
+        assert abs(T(complex(*res["chain_center"][i]), z_chain).mean()) < 1e-9
     for disk in res["disks"]:
         deficit, r_abs = np.array(disk["r_deficit"]), np.array(disk["r_abs"])
         assert np.all(deficit > 0)

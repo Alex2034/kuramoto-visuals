@@ -55,7 +55,7 @@ interface PoincareDiskProps {
   data: ReducedResponse;
   frame: number;
   view: DiskView;
-  /** Whose center the centered view uses and whose potential is drawn: one cluster, or all nodes. */
+  /** Where the centered view is centered: one cluster's center, or the barycenter of all nodes. */
   selected: number | "all";
   layers: DiskLayers;
 }
@@ -73,6 +73,8 @@ interface Marker {
   at: Vec;
   color: string;
   label: string;
+  /** "ring": hollow circle (cluster and chain barycenters); "dot": small solid point (barycenter of all nodes). */
+  shape: "ring" | "dot";
 }
 
 interface Trail {
@@ -102,6 +104,9 @@ export default function PoincareDisk({ data, frame, view, selected, layers }: Po
     const globalAngles = all ? (data.global_angles[i] ?? null) : null;
     const globalCenter = data.global_center[i] ?? null;
     const centeredAll = all && view === "centered";
+    const dumbbell = data.disks.length === 2;
+    // the potential is that of the cluster the view is centered on; otherwise of all nodes
+    const potentialAll = dumbbell && (all || view === "physical");
     const unresolved = centeredAll && globalAngles === null;
 
     // position of a node in the current frame; idx is its index in full-system order
@@ -135,13 +140,13 @@ export default function PoincareDisk({ data, frame, view, selected, layers }: Po
           label: `Cluster ${idx + 1}, node attached to the chain`,
           node: true,
         });
-        if (all || idx === k) own.push(...consts, node);
+        if (potentialAll || idx === k) own.push(...consts, node);
       });
     }
 
     const chain = unresolved ? [] : (data.chain[i] ?? []).map((t, j) => place(t, N + j));
     chain.forEach((angle, j) => dots.push({ id: `ch${j}`, angle, color: chainColor(j, chain.length), label: `Chain node ${j + 1}` }));
-    if (all) own.push(...chain);
+    if (potentialAll) own.push(...chain);
 
     // chain edges as geodesics, including the two attached clique nodes
     let edges = "";
@@ -151,39 +156,50 @@ export default function PoincareDisk({ data, frame, view, selected, layers }: Po
       for (let j = 0; j + 1 < path.length; j++) edges += geodesicPath(path[j], path[j + 1], toPx, SCALE);
     }
 
-    // interior markers and trails
+    // interior markers and trails; frameOf maps a point of the physical disk into the current frame
     const markers: Marker[] = [];
     const trails: Trail[] = [];
     const pAll: Vec | null = globalCenter ? { x: globalCenter[0], y: globalCenter[1] } : null;
-    if (view === "physical") {
+    const chainCenter = data.chain_center[i] ?? null;
+    const pChain: Vec | null = chainCenter ? { x: chainCenter[0], y: chainCenter[1] } : null;
+    const origin: Vec | null = view === "physical" ? null : centeredAll ? pAll : clusterCenter(sel, i);
+    const frameOf = (p: Vec): Vec => (origin ? mobiusPoint(origin, p) : p);
+    const drawable = view === "physical" || origin !== null;
+
+    if (drawable && !unresolved) {
       data.disks.forEach((d, idx) => {
-        const pts: Vec[] = [];
-        for (let t = 0; t <= i; t++) pts.push(clusterCenter(d, t));
-        trails.push({ id: `t${idx}`, points: polyline(pts), color: CLUSTER_COLORS[idx] });
-        markers.push({ id: `m${idx}`, at: pts[i], color: CLUSTER_COLORS[idx], label: `P${idx + 1}: center of cluster ${idx + 1}` });
+        const isOrigin = view === "centered" && !all && idx === k;
+        if (view === "physical") {
+          const pts: Vec[] = [];
+          for (let t = 0; t <= i; t++) pts.push(clusterCenter(d, t));
+          trails.push({ id: `t${idx}`, points: polyline(pts), color: CLUSTER_COLORS[idx] });
+        }
+        markers.push({
+          id: `m${idx}`,
+          at: isOrigin ? { x: 0, y: 0 } : frameOf(clusterCenter(d, i)),
+          color: CLUSTER_COLORS[idx],
+          label: `Barycenter of cluster ${idx + 1}${isOrigin ? " (view is centered here)" : ""}`,
+          shape: "ring",
+        });
       });
-      if (pAll) markers.push({ id: "m-all", at: pAll, color: ALL_COLOR, label: "P_all: barycenter of all nodes" });
-    } else if (centeredAll) {
+      if (pChain) {
+        markers.push({ id: "m-chain", at: frameOf(pChain), color: ALL_COLOR, label: "Barycenter of the chain", shape: "ring" });
+      }
       if (pAll) {
-        markers.push({ id: "m-all", at: { x: 0, y: 0 }, color: ALL_COLOR, label: "P_all (view is centered here)" });
-        data.disks.forEach((d, idx) => {
-          const at = mobiusPoint(pAll, clusterCenter(d, i));
-          markers.push({ id: `m${idx}`, at, color: CLUSTER_COLORS[idx], label: `P${idx + 1}: center of cluster ${idx + 1}` });
+        markers.push({
+          id: "m-all",
+          at: centeredAll ? { x: 0, y: 0 } : frameOf(pAll),
+          color: ALL_COLOR,
+          label: `Barycenter of all nodes${centeredAll ? " (view is centered here)" : ""}`,
+          shape: "dot",
         });
       }
-    } else {
-      markers.push({ id: "m-own", at: { x: 0, y: 0 }, color: CLUSTER_COLORS[k], label: `P${k + 1} (view is centered here)` });
-      data.disks.forEach((d, idx) => {
-        if (idx === k) return;
-        const at = mobiusPoint(clusterCenter(sel, i), clusterCenter(d, i));
-        markers.push({ id: `m${idx}`, at, color: CLUSTER_COLORS[idx], label: `P${idx + 1}: center of cluster ${idx + 1}` });
-      });
     }
 
     const full = layers.full && view === "physical" ? (data.full[i] ?? []) : [];
-    const norm = all ? 2 * N + data.l : N;
+    const norm = potentialAll ? 2 * N + data.l : N;
 
-    return { dots, own, norm, edges, markers, trails, full, unresolved };
+    return { dots, own, norm, edges, markers, trails, full, unresolved, potentialAll };
   }, [data, i, view, k, sel, all, layers.geodesics, layers.full]);
 
   useEffect(() => {
@@ -252,7 +268,11 @@ export default function PoincareDisk({ data, frame, view, selected, layers }: Po
           )}
           {scene.markers.map((m) => {
             const p = toPx(m.at);
-            return (
+            return m.shape === "dot" ? (
+              <circle key={m.id} cx={p.x} cy={p.y} r={4} fill={m.color}>
+                <title>{m.label}</title>
+              </circle>
+            ) : (
               <circle key={m.id} cx={p.x} cy={p.y} r={7} fill="none" stroke={m.color} strokeWidth={2.5} pointerEvents="stroke">
                 <title>{m.label}</title>
               </circle>
@@ -277,16 +297,37 @@ export default function PoincareDisk({ data, frame, view, selected, layers }: Po
           </span>
         )}
         <span>
-          ■ {data.chain.length > 0 ? "node attached to the chain" : "node N"}
+          {data.disks.map((_, idx) => (
+            <span key={idx} className="mr-1 inline-block h-2 w-2" style={{ background: CLUSTER_COLORS[idx] }} />
+          ))}
+          {data.chain.length > 0 ? "square: node attached to the chain" : "square: node N"}
         </span>
         <span>
-          ◎ {view === "physical" ? "cluster center P with trail" : "cluster centers"}
-          {data.global_center.length > 0 ? "; gray: barycenter of all nodes" : ""}
+          {data.disks.map((_, idx) => (
+            <span
+              key={idx}
+              className="mr-1 inline-block h-2.5 w-2.5 rounded-full border-2 align-middle"
+              style={{ borderColor: CLUSTER_COLORS[idx] }}
+            />
+          ))}
+          ring: barycenter of a cluster{view === "physical" ? ", with trail" : ""}
         </span>
+        {data.chain_center.length > 0 && (
+          <span>
+            <span className="mr-1 inline-block h-2.5 w-2.5 rounded-full border-2 align-middle" style={{ borderColor: ALL_COLOR }} />
+            gray ring: barycenter of the chain
+          </span>
+        )}
+        {data.global_center.length > 0 && (
+          <span>
+            <span className="mr-1 inline-block h-2 w-2 rounded-full align-middle" style={{ background: ALL_COLOR }} />
+            gray dot: barycenter of all nodes
+          </span>
+        )}
         {scene.full.length > 0 && <span>○ full system</span>}
         {layers.potential && (
           <span className="flex items-center gap-1">
-            f, {all ? "all nodes" : `cluster ${k + 1}`}: {F_MIN}
+            f, {scene.potentialAll ? "all nodes" : `cluster ${k + 1}`}: {F_MIN}
             <span
               className="inline-block h-2 w-16"
               style={{ background: `linear-gradient(to right, rgb(${RAMP_LO.join(",")}), rgb(${RAMP_HI.join(",")}))` }}

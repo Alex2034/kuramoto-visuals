@@ -446,6 +446,13 @@ shows the shape of that arc magnified. There is no single M\"obius map moving
 all nodes, so nothing is rigid in this frame, in contrast to
 \eqref{eq:centered-frame}.
 
+The interface also marks the barycenter of the chain nodes alone,
+\begin{equation}\label{eq:chain-center}
+P_{\mathrm{chain}}:=\bary(z_{N+1},\dots,z_{N+l}),
+\end{equation}
+next to $P_{\mathrm{all}}$ and the two cluster centers; in a frame centered at
+some $p$ each of these points is drawn at its image under $\T_p$.
+
 In double precision $P_{\mathrm{all}}$ is computed from the phases themselves
 and is resolved while $1-|P_{\mathrm{all}}|\gtrsim10^{-12}$, that is while the
 arc is wider than about $10^{-6}$; for $N=l=20$, $\lambda=1$, $\kappa=10$ this
@@ -731,7 +738,7 @@ Formula & Implementation & Test\\
 \eqref{eq:center}, \eqref{eq:centered-frame}, \eqref{eq:gauge-frame}, \eqref{eq:potential-frames}
   & frontend \code{clusterCenter}, \code{toFrame}, \code{potential}
   & \code{test\_barycenter\_gauge\_identities}, \code{test\_frames}\\
-\eqref{eq:global-center} & \code{reduced.global\_frame} & \code{test\_dumbbell\_matches\_full\_system}\\
+\eqref{eq:global-center}, \eqref{eq:chain-center} & \code{reduced.global\_frame}, \code{resolved\_barycenter} & \code{test\_dumbbell\_matches\_full\_system}\\
 \eqref{eq:v-def}, \eqref{eq:s-def} & \code{mobius.w\_from\_v}, \code{v\_from\_w}, \code{s\_of\_rho} & \code{test\_v\_w\_roundtrip}\\
 \eqref{eq:rho-dot}, \eqref{eq:rho-late}, \eqref{eq:deficit-late} & --- & \code{test\_rho\_rate}\\
 \eqref{eq:stable-mobius} & \code{mobius.T\_w\_boundary}, frontend \code{tBoundary} & \code{test\_stable\_T\_w\_matches\_naive}, \code{test\_stable\_T\_w\_matches\_mpmath}\\
@@ -750,7 +757,7 @@ Formula & Implementation & Test\\
 \paragraph{Numerical setup.} The reduced and the full system are integrated
 with an explicit Runge--Kutta method of order 8 (\code{DOP853}) at relative
 tolerance $10^{-11}$, on a grid that is dense up to $t=10/\lambda$ and uniform
-up to $t=2\tau$ by default. For $N=l=20$, $\lambda=\kappa=1$ and a run up to $t=5\tau$ the
+up to $t=3\tau$ by default. For $N=l=20$, $\lambda=\kappa=1$ and a run up to $t=5\tau$ the
 reconstructed phases agree with the full system to about $10^{-8}$ throughout,
 while $\rho$ reaches $\approx1300$.
 
