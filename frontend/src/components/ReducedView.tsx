@@ -14,8 +14,7 @@ interface ReducedViewProps {
 
 const VIEWS: { id: DiskView; label: string; hint: string }[] = [
   { id: "physical", label: "Physical", hint: "Oscillators as they are; ◎ is the conformal barycenter P = −ζw of each cluster." },
-  { id: "centred", label: "Centred", hint: "Möbius-recentred at P: the cluster is the fixed constellation β rotated by ζ." },
-  { id: "gauge", label: "Gauge", hint: "β fixed; w(t) moves over the landscape f(w, ψ) of eq. (2.12)." },
+  { id: "centered", label: "Centered", hint: "Möbius-recentered at P: the cluster is the fixed constellation β rotated by ζ." },
 ];
 
 const LAYERS: { id: keyof DiskLayers; label: string }[] = [

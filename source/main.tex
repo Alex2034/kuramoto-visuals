@@ -96,7 +96,7 @@ r=\frac1N\sum_{j\in\text{clique}}\e^{\ii\theta_j},\qquad 0\le |r|\le 1 .
 
 Both cliques are treated identically, so from \cref{sec:complete} on we write
 formulas for the first one, with identical nodes $1,\dots,N-1$, attached node
-$N$ and chain neighbour $N+1$. For the second clique replace these by
+$N$ and chain neighbor $N+1$. For the second clique replace these by
 $N+l+2,\dots,2N+l$, by $N+l+1$ and by $N+l$.
 
 %======================================================================
@@ -176,7 +176,7 @@ these are the equations (1.8) of the thesis.
 \item $w$ measures how strongly the configuration $\beta$ is squeezed. The map
       $\T_w$ pushes boundary points away from $w/|w|$ and towards $-w/|w|$; as
       $|w|\to1$ every $\beta_j\neq w/|w|$ is sent to $-w/|w|$. Full
-      synchronisation of the clique is $|w|\to1$.
+      synchronization of the clique is $|w|\to1$.
 \item $\beta_j$ are constants of the motion. They are not unique: the triple
       $(w,\zeta,\beta)$ has a three-parameter gauge freedom, fixed in
       \cref{sec:gauge}.
@@ -308,7 +308,7 @@ $q=\frac1N\bigl[\sum_{j<N}\T_w(\beta_j)+\T_w(\psi)\bigr]$ are the system
 (2.8)--(2.10) of the thesis and are equivalent to
 \eqref{eq:w-dot}--\eqref{eq:node-dot}.
 
-The two forms differ in practice. As the clique synchronises, $|w|\to1$ and
+The two forms differ in practice. As the clique synchronizes, $|w|\to1$ and
 $P(w,\psi)\to0$, so \eqref{eq:chi-dot} is singular: $\psi$ races towards
 $w/|w|$ while $\theta_N$ itself moves slowly. The code therefore integrates
 $\theta_N$ by \eqref{eq:node-dot} and never forms $\psi$.
@@ -361,7 +361,7 @@ every automorphism $M$ of the disk
 By \eqref{eq:poisson-gradient} it is the critical point of
 $p\mapsto\sum_j\ln P(p,z_j)$.
 
-\paragraph{Computation.} Newton's method in the frame recentred at the current
+\paragraph{Computation.} Newton's method in the frame recentered at the current
 guess. With $y_j=\T_p(z_j)$, $m=\frac1n\sum y_j$ and $B=\frac1n\sum y_j^2$,
 \begin{equation}\label{eq:bary-newton}
 d=\frac{m+B\,\conj m}{1-|B|^2},\qquad p\leftarrow\T_{-p}(d)=\frac{d+p}{1+\conj p\,d},
@@ -379,26 +379,26 @@ w(0)=-p_0,\qquad \zeta(0)=1,
 \end{equation}
 which reproduces the initial data since $\T_{-p_0}=\T_{p_0}^{-1}$. In this gauge,
 by \eqref{eq:bary-equivariance} applied to $M=\zeta\T_w$ and $M(0)=-\zeta w$,
-\begin{equation}\label{eq:centre}
+\begin{equation}\label{eq:center}
 P:=-\zeta\,w=\bary(z_1,\dots,z_{N-1})\qquad\text{at every time.}
 \end{equation}
 Thus $P$ is a gauge-independent point of the disk attached to the cluster, its
-\emph{centre}. It starts wherever the initial configuration puts it and runs to
+\emph{center}. It starts wherever the initial configuration puts it and runs to
 the boundary as the cluster collapses. Moreover
-\begin{equation}\label{eq:centred-frame}
+\begin{equation}\label{eq:centered-frame}
 \T_P(z)=\zeta\,\T_{-w}\bigl(\conj\zeta\,z\bigr),\qquad\text{hence}\qquad
 \T_P(z_j)=\zeta\,\beta_j ,\quad j=1,\dots,N-1 .
 \end{equation}
 
 \subsection{Three frames}\label{sec:frames}
 
-The same state can be drawn in three ways; they are the three views of the
-user interface.
+The same state can be drawn in three ways. The user interface shows the first
+two; the third is the frame of the thesis.
 \begin{description}[leftmargin=1.5em]
-\item[Physical frame.] The oscillators $z_j$ themselves, and the centre $P$
+\item[Physical frame.] The oscillators $z_j$ themselves, and the center $P$
       inside the disk.
-\item[Centred frame.] Everything mapped by $\T_P$. The cluster centre is at
-      the origin and by \eqref{eq:centred-frame} the cluster is the fixed
+\item[Centered frame.] Everything mapped by $\T_P$. The cluster center is at
+      the origin and by \eqref{eq:centered-frame} the cluster is the fixed
       constellation $\beta$ rotated rigidly by $\zeta$. All other points are
       seen through the same M\"obius lens; when the cluster has collapsed they
       all sit near the single boundary point $\zeta\,\e^{\ii\varphi}$,
@@ -414,7 +414,7 @@ user interface.
       origin. This is the frame of the thesis: $w$ moves over the landscape
       $f(\cdot,\psi)$ by \eqref{eq:gradient-flow}.
 \end{description}
-The gauge frame is the centred frame rotated by $\conj\zeta$.
+The gauge frame is the centered frame rotated by $\conj\zeta$.
 
 \paragraph{Potentials in the frames.} Let
 $F(p)=\frac1N\sum_{j=1}^{N}\ln P(p,z_j)$ be the potential built from the
@@ -424,7 +424,7 @@ inverts $\zeta\T_w$ up to a rotation,
 F(P)=-f(w,\psi).
 \end{equation}
 In the physical frame the part of $F$ coming from the identical nodes has its
-maximum at $P$ by construction, so that picture shows where the centre is, not
+maximum at $P$ by construction, so that picture shows where the center is, not
 a descent. The descent of \eqref{eq:gradient-flow} is seen in the gauge frame.
 
 %======================================================================
@@ -549,7 +549,7 @@ $\lambda,\kappa$. Its minimum $E=-\sum_{i<j}a_{ij}$ is full synchrony.
 
 \subsection{Synchrony and the slow time scale}
 
-Linearising \eqref{eq:full-system} at $\theta_1=\dots=\theta_{2N+l}$ gives
+Linearizing \eqref{eq:full-system} at $\theta_1=\dots=\theta_{2N+l}$ gives
 $\dot\varepsilon=-L\varepsilon$ with the weighted graph Laplacian
 \begin{equation}\label{eq:laplacian}
 L=\operatorname{diag}\Bigl(\sum_j a_{ij}\Bigr)-A,\qquad
@@ -606,7 +606,7 @@ is exactly
 \end{equation}
 and symmetrically at the other end: $l+4$ phases. This is what the dynamics
 becomes after the fast stage; the first line is the second relation of
-\eqref{eq:rho-late}. Its linearisation at synchrony has the same slowest rate
+\eqref{eq:rho-late}. Its linearization at synchrony has the same slowest rate
 $\lambda_2$ as the full system.
 
 In the phase differences $\Delta_N=\theta_N-\Theta_1$,
@@ -702,8 +702,8 @@ Formula & Implementation & Test\\
 \eqref{eq:f-dot} & --- & \code{test\_potential\_rate\_identity}\\
 \eqref{eq:barycenter}, \eqref{eq:bary-equivariance}, \eqref{eq:bary-newton} & \code{mobius.barycenter} & \code{test\_barycenter\_zero\_mean\_and\_equivariance}\\
 \eqref{eq:calibration} & \code{reduced.calibrate}, \code{initial\_state} & \code{test\_calibration\_reproduces\_initial\_phases}\\
-\eqref{eq:centre}, \eqref{eq:centred-frame}, \eqref{eq:gauge-frame}, \eqref{eq:potential-frames}
-  & frontend \code{clusterCentre}, \code{toFrame}, \code{gaugePoint}, \code{potential}
+\eqref{eq:center}, \eqref{eq:centered-frame}, \eqref{eq:gauge-frame}, \eqref{eq:potential-frames}
+  & frontend \code{clusterCenter}, \code{toFrame}, \code{potential}
   & \code{test\_barycenter\_gauge\_identities}, \code{test\_frames}\\
 \eqref{eq:v-def}, \eqref{eq:s-def} & \code{mobius.w\_from\_v}, \code{v\_from\_w}, \code{s\_of\_rho} & \code{test\_v\_w\_roundtrip}\\
 \eqref{eq:rho-dot}, \eqref{eq:rho-late}, \eqref{eq:deficit-late} & --- & \code{test\_rho\_rate}\\
@@ -711,7 +711,7 @@ Formula & Implementation & Test\\
 \eqref{eq:microscope}, \eqref{eq:microscope-limit} & \code{mobius.microscope} & \code{test\_microscope\_definition\_and\_limit}\\
 \eqref{eq:deficit} & \code{reduced.order\_deficit} & \code{test\_dumbbell\_matches\_full\_system}\\
 \eqref{eq:energy} & \code{kuramoto.energy} & \code{test\_energy\_is\_a\_gradient\_flow}\\
-\eqref{eq:laplacian}, \eqref{eq:tau} & \code{kuramoto.fiedler}, \code{reduced.fit\_tau} & \code{test\_linearisation\_at\_synchrony\_is\_minus\_laplacian}, \code{test\_dumbbell\_matches\_full\_system}\\
+\eqref{eq:laplacian}, \eqref{eq:tau} & \code{kuramoto.fiedler}, \code{reduced.fit\_tau} & \code{test\_linearization\_at\_synchrony\_is\_minus\_laplacian}, \code{test\_dumbbell\_matches\_full\_system}\\
 \eqref{eq:collapsed} & --- & \code{test\_collapsed\_cluster\_system}\\
 \eqref{eq:state-one}, \eqref{eq:state-two} & --- & \code{test\_near\_observed\_states}\\
 \bottomrule

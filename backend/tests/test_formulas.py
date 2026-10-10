@@ -59,7 +59,7 @@ def test_gradient_form_of_w_equation():
 
 
 def test_frames():
-    """eq:centre, eq:centred-frame, eq:gauge-frame, eq:potential-frames."""
+    """eq:center, eq:centered-frame, eq:gauge-frame, eq:potential-frames."""
     rng = np.random.default_rng(22)
     betas, y = random_state(rng, N, L, 4.0)
     beta = betas[0]
@@ -104,7 +104,7 @@ def test_energy_is_a_gradient_flow():
     assert np.allclose(kuramoto_ode(0.0, theta, W), -grad, atol=1e-8)
 
 
-def test_linearisation_at_synchrony_is_minus_laplacian():
+def test_linearization_at_synchrony_is_minus_laplacian():
     """eq:laplacian."""
     W = build_dumbbell_adjacency(N, L, LAM, KAPPA)
     V = 2 * N + L

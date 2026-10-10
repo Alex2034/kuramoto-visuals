@@ -19,7 +19,7 @@ const TICKS = [-10, -3, -1, 0, 1, 3, 10];
 const xOf = (mu: number) => PAD + (Math.atan(mu) / Math.PI + 0.5) * (W - 2 * PAD);
 
 /**
- * Internal shape of a collapsed cluster. Phase offsets from the cluster centre are
+ * Internal shape of a collapsed cluster. Phase offsets from the cluster center are
  * s * mu_j with s = 1 - |w|; the angles themselves lose this below machine precision.
  */
 export default function ClusterMicroscope({ disk, frame, color, index }: ClusterMicroscopeProps) {
@@ -29,7 +29,7 @@ export default function ClusterMicroscope({ disk, frame, color, index }: Cluster
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
       <div className="mb-1 flex items-baseline justify-between gap-4 text-sm">
-        <span className="font-medium">Cluster {index + 1} microscope: offsets μ from the centre</span>
+        <span className="font-medium">Cluster {index + 1} microscope: offsets μ from the center</span>
         <span className="whitespace-nowrap text-gray-600">
           1 unit of μ = s = 10<sup>{exponent.toFixed(1)}</sup> rad
         </span>

@@ -25,7 +25,7 @@ export function tBoundary(rho: number, phi: number, angle: number): number {
 
 export const onCircle = (angle: number): Vec => ({ x: Math.cos(angle), y: Math.sin(angle) });
 
-export type DiskView = "physical" | "centred" | "gauge";
+export type DiskView = "physical" | "centered";
 
 /** Phases of the N-1 identical nodes of a clique at frame i. */
 export function clusterAngles(d: DiskSeries, i: number): number[] {
@@ -33,26 +33,19 @@ export function clusterAngles(d: DiskSeries, i: number): number[] {
 }
 
 /** Conformal barycenter of the cluster, P = -zeta w. */
-export function clusterCentre(d: DiskSeries, i: number): Vec {
+export function clusterCenter(d: DiskSeries, i: number): Vec {
   const r = 1 - sOfRho(d.rho[i]);
   const a = d.alpha[i] + d.phi[i] + Math.PI;
   return { x: r * Math.cos(a), y: r * Math.sin(a) };
 }
 
-/** w = tanh(rho/2) e^{i phi}: where the physical origin sits in the gauge frame. */
-export function gaugePoint(d: DiskSeries, i: number): Vec {
-  const r = 1 - sOfRho(d.rho[i]);
-  return { x: r * Math.cos(d.phi[i]), y: r * Math.sin(d.phi[i]) };
-}
-
 /**
  * Map a physical boundary angle into the frame of disk d at frame i.
- * centred: T_P(z) = zeta T_{-w}(conj(zeta) z); gauge: the same without the rotation zeta.
+ * centered: T_P(z) = zeta T_{-w}(conj(zeta) z).
  */
 export function toFrame(d: DiskSeries, i: number, view: DiskView, theta: number): number {
   if (view === "physical") return theta;
-  const a = tBoundary(d.rho[i], d.phi[i] + Math.PI, theta - d.alpha[i]);
-  return view === "centred" ? a + d.alpha[i] : a;
+  return d.alpha[i] + tBoundary(d.rho[i], d.phi[i] + Math.PI, theta - d.alpha[i]);
 }
 
 /** Interior point through T_P (naive formula; only used for markers). */

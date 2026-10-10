@@ -4,8 +4,7 @@ import { useEffect, useMemo, useRef } from "react";
 import type { ReducedResponse } from "@/types/api";
 import {
   clusterAngles,
-  clusterCentre,
-  gaugePoint,
+  clusterCenter,
   geodesicPath,
   mobiusPoint,
   onCircle,
@@ -40,7 +39,7 @@ interface PoincareDiskProps {
   data: ReducedResponse;
   frame: number;
   view: DiskView;
-  /** Disk whose frame is used by the centred and gauge views, and whose potential is drawn. */
+  /** Disk whose frame is used by the centered view, and whose potential is drawn. */
   selected: number;
   layers: DiskLayers;
 }
@@ -85,15 +84,14 @@ export default function PoincareDisk({ data, frame, view, selected, layers }: Po
 
     data.disks.forEach((d, idx) => {
       const isSel = idx === k;
-      if (view === "gauge" && !isSel) return;
       let consts: number[];
       let node: number;
       if (view === "physical") {
         consts = clusterAngles(d, i);
         node = d.theta_node[i];
       } else if (isSel) {
-        // T_P(z_j) = zeta beta_j exactly; in the gauge frame just beta_j
-        consts = d.beta.map((b) => (view === "centred" ? b + d.alpha[i] : b));
+        // T_P(z_j) = zeta beta_j exactly
+        consts = d.beta.map((b) => b + d.alpha[i]);
         node = toFrame(d, i, view, d.theta_node[i]);
       } else {
         consts = clusterAngles(d, i).map((t) => toFrame(sel, i, view, t));
@@ -106,18 +104,18 @@ export default function PoincareDisk({ data, frame, view, selected, layers }: Po
         id: `n${idx}`,
         angle: node,
         color: CLUSTER_COLORS[idx],
-        label: view === "gauge" ? "ψ (node attached to the chain)" : `Cluster ${idx + 1}, node attached to the chain`,
+        label: `Cluster ${idx + 1}, node attached to the chain`,
         node: true,
       });
       if (isSel) own.push(...consts, node);
     });
 
-    const chain = view === "gauge" ? [] : (data.chain[i] ?? []).map((t) => toFrame(sel, i, view, t));
+    const chain = (data.chain[i] ?? []).map((t) => toFrame(sel, i, view, t));
     chain.forEach((angle, j) => dots.push({ id: `ch${j}`, angle, color: CHAIN_COLOR, label: `Chain node ${j + 1}` }));
 
     // chain edges as geodesics, including the two attached clique nodes
     let edges = "";
-    if (layers.geodesics && data.disks.length === 2 && view !== "gauge") {
+    if (layers.geodesics && data.disks.length === 2) {
       const ends = data.disks.map((d) => toFrame(sel, i, view, d.theta_node[i]));
       const path = [ends[0], ...chain, ends[1]];
       for (let j = 0; j + 1 < path.length; j++) edges += geodesicPath(path[j], path[j + 1], toPx, SCALE);
@@ -129,22 +127,17 @@ export default function PoincareDisk({ data, frame, view, selected, layers }: Po
     if (view === "physical") {
       data.disks.forEach((d, idx) => {
         const pts: Vec[] = [];
-        for (let t = 0; t <= i; t++) pts.push(clusterCentre(d, t));
+        for (let t = 0; t <= i; t++) pts.push(clusterCenter(d, t));
         trails.push({ id: `t${idx}`, points: polyline(pts), color: CLUSTER_COLORS[idx] });
-        markers.push({ id: `m${idx}`, at: pts[i], color: CLUSTER_COLORS[idx], label: `P${idx + 1}: centre of cluster ${idx + 1}` });
-      });
-    } else if (view === "centred") {
-      markers.push({ id: "m-own", at: { x: 0, y: 0 }, color: CLUSTER_COLORS[k], label: `P${k + 1} (view is centred here)` });
-      data.disks.forEach((d, idx) => {
-        if (idx === k) return;
-        const at = mobiusPoint(clusterCentre(sel, i), clusterCentre(d, i));
-        markers.push({ id: `m${idx}`, at, color: CLUSTER_COLORS[idx], label: `P${idx + 1}: centre of cluster ${idx + 1}` });
+        markers.push({ id: `m${idx}`, at: pts[i], color: CLUSTER_COLORS[idx], label: `P${idx + 1}: center of cluster ${idx + 1}` });
       });
     } else {
-      const pts: Vec[] = [];
-      for (let t = 0; t <= i; t++) pts.push(gaugePoint(sel, t));
-      trails.push({ id: "tw", points: polyline(pts), color: CLUSTER_COLORS[k] });
-      markers.push({ id: "mw", at: pts[i], color: CLUSTER_COLORS[k], label: `w${k + 1}` });
+      markers.push({ id: "m-own", at: { x: 0, y: 0 }, color: CLUSTER_COLORS[k], label: `P${k + 1} (view is centered here)` });
+      data.disks.forEach((d, idx) => {
+        if (idx === k) return;
+        const at = mobiusPoint(clusterCenter(sel, i), clusterCenter(d, i));
+        markers.push({ id: `m${idx}`, at, color: CLUSTER_COLORS[idx], label: `P${idx + 1}: center of cluster ${idx + 1}` });
+      });
     }
 
     const full = layers.full && view === "physical" ? (data.full[i] ?? []) : [];
@@ -222,15 +215,13 @@ export default function PoincareDisk({ data, frame, view, selected, layers }: Po
         </svg>
       </div>
       <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-600">
-        {data.disks.map((_, idx) =>
-          view === "gauge" && idx !== k ? null : (
-            <span key={idx}>
-              <span className="mr-1 inline-block h-2 w-2 rounded-full" style={{ background: CLUSTER_COLORS[idx] }} />
-              Cluster {idx + 1}
-            </span>
-          ),
-        )}
-        {data.chain.length > 0 && view !== "gauge" && (
+        {data.disks.map((_, idx) => (
+          <span key={idx}>
+            <span className="mr-1 inline-block h-2 w-2 rounded-full" style={{ background: CLUSTER_COLORS[idx] }} />
+            Cluster {idx + 1}
+          </span>
+        ))}
+        {data.chain.length > 0 && (
           <span>
             <span className="mr-1 inline-block h-2 w-2 rounded-full" style={{ background: CHAIN_COLOR }} />
             Chain
@@ -238,10 +229,9 @@ export default function PoincareDisk({ data, frame, view, selected, layers }: Po
         )}
         <span>
           ■ {data.chain.length > 0 ? "node attached to the chain" : "node N"}
-          {view === "gauge" ? " (ψ)" : ""}
         </span>
         <span>
-          ◎ {view === "gauge" ? "w(t) with trail" : view === "physical" ? "cluster centre P with trail" : "cluster centres"}
+          ◎ {view === "physical" ? "cluster center P with trail" : "cluster centers"}
         </span>
         {scene.full.length > 0 && <span>○ full system</span>}
         {layers.potential && (

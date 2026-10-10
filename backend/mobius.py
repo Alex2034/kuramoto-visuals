@@ -64,7 +64,7 @@ def T_w_boundary(rho, phi, angle):
 def barycenter(z, tol=1e-15, max_iter=200):
     """
     Conformal barycenter of boundary points z: the unique p in the disk with
-    mean(T_p(z)) = 0. Newton step taken in the frame recentred at the current p.
+    mean(T_p(z)) = 0. Newton step taken in the frame recentered at the current p.
     """
     z = np.asarray(z, dtype=complex)
     p = 0j
@@ -109,7 +109,7 @@ def potential_gauge(rho, phi, beta_angles, node_angle, N):
 
 def microscope(rho, phi, beta_angles):
     """
-    Offsets of the cluster phases from the cluster centre Theta = alpha + phi + pi,
+    Offsets of the cluster phases from the cluster center Theta = alpha + phi + pi,
     in units of s = 1 - tanh(rho/2): arg(z_j) - Theta = s * mu_j.
     As rho -> inf, mu_j -> -cot((beta_j - phi)/2).
     """
